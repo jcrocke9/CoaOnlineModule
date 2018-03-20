@@ -1,3 +1,11 @@
+#Require -Version 5.0
+
+using namespace System;
+using namespace System.Text;
+using namespace System.Diagnostics;
+using namespace System.Linq;
+using namespace System.Collections.Generic;
+Import-Module ActiveDirectory;
 Import-Module CoaLoggingModule -Function Add-CoaWriteToLog
 <#
     .Synopsis
@@ -191,11 +199,292 @@ function Set-CoaMailboxConfiguration {
     Clear-Variable UserList
     $ErrorActionPreference = "Continue"
 }
+
+function WriteToLog {
+    param([string]$logLineTime, [string]$writeTo, [string]$logCode)
+    $logFileDate = Get-Date -UFormat "%Y%m%d"
+    $logLineInfo = "`t$([Environment]::UserName)`t$([Environment]::MachineName)`t"
+    $logLine = $logLineTime
+    $logLine += $logLineInfo
+    $logLine += $logCode; $logLine += "`t"
+    $logLine += $writeTo
+    $logLine | Out-File -FilePath "C:\Logs\NewUserScript_$logFileDate.log" -Append -NoClobber
+    Return;
+}
+
+function OpenLog {
+    $logLineTime = (Get-Date).ToString()
+    $logCode = "Start"
+    $writeTo = "Starting New User script"
+    WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    Return;
+}
+function SendAnEmail {
+    param ([string]$subject, [string]$body)
+    $emailAddress = "$([Environment]::UserName)@alexandriava.gov"
+    Send-MailMessage -To $emailAddress -From "COA New User Module <noreply@alexandriava.gov>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -Port 25
+    $writeTo = "Send-MailMessage`t$subject`t$body"
+    $logCode = "Email"
+    $logLineTime = (Get-Date).ToString()
+    WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    Return;
+}
+
+function QueryAdToValidateUsers {
+    param ([string]$samAccountName)
+    $ErrorActionPreference = "stop"
+    try {
+        $mail = Get-ADUser $samAccountName -Properties mail | Select-Object mail -ExpandProperty mail
+        if (!$mail) {$mail = "None set"}
+        $department = Get-ADUser $samAccountName -Properties department | Select-Object department -ExpandProperty department
+        $userAccountControl = Get-ADUser $samAccountName -Properties userAccountControl | Select-Object userAccountControl -ExpandProperty userAccountControl
+        if ($userAccountControl -eq 514) {
+            $userAccountControl = "User Disabled"
+        }
+        elseif ($userAccountControl -eq 512) {
+            $userAccountControl = "Active"
+        }
+        elseif ($userAccountControl -eq 66048) {
+            $userAccountControl = "Has a non-expiring password"
+        }
+        else {
+            $problemUsers += $samAccountName
+            $writeTo = "Get-ADUser: $samAccountName`t$userAccountControl"
+            $logCode = "Error"
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            SendAnEmail -subject "New-MSOLUser Error" -body "Get-ADUser: samAccountName cannot be found for $samAccountName"
+        }
+        $writeTo = "$samAccountName | $userAccountControl | $mail | $department"
+        $logCode = "Start"
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    }
+    catch {
+        if ($user.Length -gt 20) {
+            $writeTo = "The user name $samAccountName is more than 20 characters"
+            $logCode = "Error"
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            SendAnEmail -subject "New-MSOLUser Error" -body "The user name $samAccountName is more than 20 characters; no account was created."
+        }
+        $problemUsers.Add($samAccountName);
+        $writeTo = "Get-ADUser: samAccountName cannot be found for $samAccountName"
+        $logCode = "Error"
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        SendAnEmail -subject "New-MSOLUser Error" -body "Get-ADUser: samAccountName cannot be found for $samAccountName"
+    }
+    $ErrorActionPreference = "continue"
+    Return;
+}
+#endregion
+
+#region: Sets the mail and SMTP attributes, if needed
+function SetMailAndSmtpAttributes {
+    param([string]$user)
+    $mail = Get-ADUser $user -Properties mail | Select-Object mail -ExpandProperty mail
+    if (!$mail) {
+        try {
+            Set-ADUser -Identity $user -EmailAddress "$user@alexandriava.gov" -ErrorAction Stop
+            $writeTo = "Set-ADUser: Successfully added email address to $user@alexandriava.gov"
+            $logCode = "Success"
+        }
+        catch {
+            $logCode = "Error"
+            "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
+        }    
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    }
+    Start-Sleep -Seconds 5
+    $mail = Get-ADUser $user -Properties mail | Select-Object mail -ExpandProperty mail
+    $SMTP = Get-ADUser -Identity $user -Properties proxyaddresses | Select-Object proxyaddresses -ExpandProperty proxyaddresses
+    if (!$SMTP) {
+        try {
+            Set-ADUser -Identity $user -Add @{Proxyaddresses = "SMTP:" + $mail } -ErrorAction Stop
+            Set-ADUser -Identity $user -Add @{targetAddress = "SMTP:" + $mail } -ErrorAction Stop
+            Set-ADUser -Identity $user -Replace @{mailNickname = $user}
+            $writeTo = "Set-ADUser: Successfully set SMTP address to SMTP:$mail"
+            $logCode = "Success"
+        }
+        catch {
+            $logCode = "Error"
+            "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
+        }    
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    }
+
+    Return;
+}
+
+function SetLicenseAttributeE3 {
+    param([string]$user)
+    $extensionAttribute13 = Get-ADUser -Identity $user -Properties extensionAttribute13 | Select-Object -ExpandProperty extensionAttribute13
+    if (!$extensionAttribute13) {
+        try {
+            Set-ADUser -Identity $user -Add @{extensionAttribute13 = "E3"}
+            $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = E3"
+            $logCode = "Success"
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        
+        }
+        catch {
+            "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
+            $logCode = "Error"
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode 
+        }
+    }
+    else {
+        try {
+            Set-ADUser -Identity $user -Replace @{extensionAttribute13 = "E3"}
+            $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = E3"
+            $logCode = "Success"
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        
+        }
+        catch {
+            "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
+            $logCode = "Error"
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode 
+        }
+    }
+}
+
+function SetLicenseAttributeK1 {
+    param([string]$user)
+    $extensionAttribute13 = Get-ADUser -Identity $user -Properties extensionAttribute13 | Select-Object -ExpandProperty extensionAttribute13
+    if (!$extensionAttribute13) {
+        try {
+            Set-ADUser -Identity $user -Add @{extensionAttribute13 = "K1"}
+            $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = K1"
+            $logCode = "Success"
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        
+        }
+        catch {
+            "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
+            $logCode = "Error"
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode 
+        }
+    }
+    else {
+        try {
+            Set-ADUser -Identity $user -Replace @{extensionAttribute13 = "K1"}
+            $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = K1"
+            $logCode = "Success"
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        
+        }
+        catch {
+            "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
+            $logCode = "Error"
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode 
+        }
+    }
+}
+class UserObject {
+    [string]$samAccountName
+    [string]$License
+}
+$global:UsersToWorkThrough = [System.Collections.Generic.List[UserObject]]::new();
 <#
     .Synopsis
     Sets new mailbox accounts up with the standard policies of COA
 
     .Description
-    Sets new mailbox accounts up with: 
+    Sets new mailbox accounts up with: email address, customAttribute13, smtp, targetAddress
+
+    .Example
+    # Sets Exchange attributes of given samAccountNames
+    Set-CoaExchangeAttributes -Users "joseph.crockett","heladio.martinez","juno.vazquez"
 #>
-Export-ModuleMember -Function Set-CoaMailboxConfiguration 
+function Set-CoaExchangeAttributes {
+    Param (
+        [parameter(
+            Position = 0,
+            ValueFromPipeline = $false)]
+        [System.Collections.Generic.List[UserObject]]
+        $UserList = $global:UsersToWorkThrough,
+        [parameter(
+            Position = 1,
+            ValueFromPipeline = $true)]    
+        [UserObject]
+        $SingleUser
+    )
+    $problemUsers = [System.Collections.Generic.List[System.Object]]::new();    
+    $standardUsers = [System.Collections.Generic.List[System.Object]]::new();
+    $basicUsers = [System.Collections.Generic.List[System.Object]]::new();
+    $standardLicenseName = "emailStandard_createAlexID"
+    $basicLicenseName = "emailBasic_createAlexID"
+
+    OpenLog
+    if ($SingleUser) {
+        QueryAdToValidateUsers -samAccountName $SingleUser.samAccountName
+        # Remove problem users
+        SetMailAndSmtpAttributes -user $SingleUser.samAccountName
+        if ($SingleUser.License -eq $basicLicenseName) {
+            SetLicenseAttributeK1 -user $SingleUser.samAccountName
+        } else {
+            SetLicenseAttributeE3 -user $SingleUser.samAccountName
+        }
+        $global:UsersToWorkThrough.Remove($SingleUser);
+    }
+    else {
+        foreach ($samAccountName in $UserList ) {
+            QueryAdToValidateUsers -samAccountName $samAccountName
+        }
+
+        foreach ($problemUser in $problemUsers) {
+            $UserList.Remove("$problemUser");
+        }
+
+        foreach ($user in $UserList) {
+            SetMailAndSmtpAttributes -user $user
+        }
+
+        # WRONG
+        SortTheUserLicenses
+
+        foreach ($user in $standardUsers) {
+            SetLicenseAttributeE3 -user $user
+        }
+
+        foreach ($user in $basicUsers) {
+            SetLicenseAttributeK1 -user $user
+        }
+        $global:UsersToWorkThrough.Clear()
+    }
+}
+
+
+function New-CoaUser {
+    Param (
+        [parameter(Mandatory = $true,
+            Position = 0)] 
+        [string]$SamAccountName,
+        [switch]$Firstline
+    )
+    $user = $null
+    $user = [UserObject]::new()
+    if ($Firstline) {
+        $user.License = "emailBasic_createAlexID"
+    }
+    else {
+        $user.License = "emailStandard_createAlexID"
+    }
+    $user.samAccountName = $samAccountName
+    $global:UsersToWorkThrough.Add($user)
+    Write-Output $global:UsersToWorkThrough
+    # Write-Output "Use New-CoaAssignments $UsersToWorkThrough to complete."
+}
+Export-ModuleMember -Function Set-CoaMailboxConfiguration, Set-CoaExchangeAttributes
