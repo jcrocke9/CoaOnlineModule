@@ -405,8 +405,19 @@ $global:UsersToWorkThrough = [System.Collections.Generic.List[UserObject]]::new(
     Sets new mailbox accounts up with: email address, customAttribute13, smtp, targetAddress
 
     .Example
-    # Sets Exchange attributes of given samAccountNames
-    Set-CoaExchangeAttributes -Users "joseph.crockett","heladio.martinez","juno.vazquez"
+    # Sets Exchange attributes of given single samAccountName with E3
+    New-CoaUser joe.crockett | Set-CoaExchangeAttributes
+
+    .Example
+    # Sets Exchange attributes of given single samAccountName with K1
+    New-CoaUser joe.crockett -Firstline | Set-CoaExchangeAttributes
+    
+    .Example
+    # Sets Exchange attributes of prepopulated New-CoaUser
+    New-CoaUser joe.crockett
+    New-CoaUser heladio.martinez -Firstline
+    Set-CoaExchangeAttributes
+
 #>
 function Set-CoaExchangeAttributes {
     Param (
@@ -422,9 +433,9 @@ function Set-CoaExchangeAttributes {
         $SingleUser
     )
     $problemUsers = [System.Collections.Generic.List[System.Object]]::new();    
-    $standardUsers = [System.Collections.Generic.List[System.Object]]::new();
-    $basicUsers = [System.Collections.Generic.List[System.Object]]::new();
-    $standardLicenseName = "emailStandard_createAlexID"
+    # $standardUsers = [System.Collections.Generic.List[System.Object]]::new();
+    # $basicUsers = [System.Collections.Generic.List[System.Object]]::new();
+    # $standardLicenseName = "emailStandard_createAlexID"
     $basicLicenseName = "emailBasic_createAlexID"
 
     OpenLog
@@ -434,14 +445,15 @@ function Set-CoaExchangeAttributes {
         SetMailAndSmtpAttributes -user $SingleUser.samAccountName
         if ($SingleUser.License -eq $basicLicenseName) {
             SetLicenseAttributeK1 -user $SingleUser.samAccountName
-        } else {
+        }
+        else {
             SetLicenseAttributeE3 -user $SingleUser.samAccountName
         }
         $global:UsersToWorkThrough.Remove($SingleUser);
     }
     else {
         foreach ($samAccountName in $UserList ) {
-            QueryAdToValidateUsers -samAccountName $samAccountName
+            QueryAdToValidateUsers -samAccountName $samAccountName.samAccountName
         }
 
         foreach ($problemUser in $problemUsers) {
@@ -449,18 +461,16 @@ function Set-CoaExchangeAttributes {
         }
 
         foreach ($user in $UserList) {
-            SetMailAndSmtpAttributes -user $user
+            SetMailAndSmtpAttributes -user $user.samAccountName
         }
 
-        # WRONG
-        SortTheUserLicenses
-
-        foreach ($user in $standardUsers) {
-            SetLicenseAttributeE3 -user $user
-        }
-
-        foreach ($user in $basicUsers) {
-            SetLicenseAttributeK1 -user $user
+        foreach ($user in $UserList) {
+            if ($user.License -eq $basicLicenseName) {
+                SetLicenseAttributeK1 -user $user.samAccountName
+            }
+            else {
+                SetLicenseAttributeE3 -user $user.samAccountName
+            }
         }
         $global:UsersToWorkThrough.Clear()
     }
