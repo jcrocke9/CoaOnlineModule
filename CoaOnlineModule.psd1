@@ -7,6 +7,8 @@
 #
 
 @{
+    # Script module or binary module file associated with this manifest
+    ModuleToProcess = 'CoaOnlineModule.psm1'
 
     # Script module or binary module file associated with this manifest
     #RootModule = ''

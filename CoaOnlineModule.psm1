@@ -6,7 +6,7 @@ using namespace System.Diagnostics;
 using namespace System.Linq;
 using namespace System.Collections.Generic;
 Import-Module ActiveDirectory;
-Import-Module CoaLoggingModule -Function Add-CoaWriteToLog
+Import-Module -Name C:\alex\CoaModule\CoaLoggingModule.psm1 -Function Add-CoaWriteToLog
 <#
     .Synopsis
     Post-creation Exchange Online mailbox configuration for new accounts.
@@ -56,7 +56,7 @@ function Set-CoaMailboxConfiguration {
     foreach ($upn in $UserList) {
 
         try {
-            Enable-Mailbox -identity $upn –Archive
+            Enable-Mailbox -identity $upn -Archive
             $writeTo = "Enable-Mailbox: identity $upn Archive"
             $logCode = "Success"
             
@@ -72,7 +72,7 @@ function Set-CoaMailboxConfiguration {
         }
         try {
     
-            Set-Mailbox -identity $upn –LitigationHoldEnabled $True –LitigationHoldDuration $LitigationHoldDuration –RoleAssignmentPolicy $RoleAssignmentPolicy
+            Set-Mailbox -identity $upn -LitigationHoldEnabled $True -LitigationHoldDuration $LitigationHoldDuration -RoleAssignmentPolicy $RoleAssignmentPolicy
             $writeTo = "Set-Mailbox: Successfully set mailbox $upn litigation hold and assignment policy"
             $logCode = "Success"
             
@@ -123,7 +123,7 @@ function Set-CoaMailboxConfiguration {
         if ($RecipientTypeDetails -eq "UserMailbox") {
     
             try {
-                Set-CASMailbox -Identity $upn –OWAMailboxPolicy $ClientAccessPolicyName 
+                Set-CASMailbox -Identity $upn -OWAMailboxPolicy $ClientAccessPolicyName 
                 Set-CASMailbox -Identity $upn -PopEnabled $false
                 Set-CASMailbox -Identity $upn -ImapEnabled $false
                 $writeTo = "Set-CASMailbox: Successfully set mailbox $upn client access permissions"
@@ -191,7 +191,6 @@ function Set-CoaMailboxConfiguration {
             }
     
             Clear-Variable LicenseLineItem
-    
         }
         Clear-Variable upn
     }
@@ -199,7 +198,7 @@ function Set-CoaMailboxConfiguration {
     Clear-Variable UserList
     $ErrorActionPreference = "Continue"
 }
-
+#region: Sets Active Directory attributes for Exchange Online
 function WriteToLog {
     param([string]$logLineTime, [string]$writeTo, [string]$logCode)
     $logFileDate = Get-Date -UFormat "%Y%m%d"
@@ -222,7 +221,8 @@ function OpenLog {
 function SendAnEmail {
     param ([string]$subject, [string]$body)
     $emailAddress = "$([Environment]::UserName)@alexandriava.gov"
-    Send-MailMessage -To $emailAddress -From "COA New User Module <noreply@alexandriava.gov>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -Port 25
+    $emailFromAddress = "COA New User Module `<noreply@alexandriava.gov`>"
+    Send-MailMessage -To $emailAddress -From $emailFromAddress -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -Port 25
     $writeTo = "Send-MailMessage`t$subject`t$body"
     $logCode = "Email"
     $logLineTime = (Get-Date).ToString()
@@ -255,7 +255,7 @@ function QueryAdToValidateUsers {
             WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
             SendAnEmail -subject "New-MSOLUser Error" -body "Get-ADUser: samAccountName cannot be found for $samAccountName"
         }
-        $writeTo = "$samAccountName | $userAccountControl | $mail | $department"
+        $writeTo = "$samAccountName`t$userAccountControl`t$mail`t$department";
         $logCode = "Start"
         $logLineTime = (Get-Date).ToString()
         WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
@@ -279,7 +279,6 @@ function QueryAdToValidateUsers {
     Return;
 }
 #endregion
-
 #region: Sets the mail and SMTP attributes, if needed
 function SetMailAndSmtpAttributes {
     param([string]$user)
@@ -475,8 +474,265 @@ function Set-CoaExchangeAttributes {
         $global:UsersToWorkThrough.Clear()
     }
 }
+#endregion
+#region: Sets ExO Attributes
+$usersFromExcel = [System.Collections.Generic.List[System.Object]]::new();
+$pathToExcel = "C:\csv\createAlexID.csv"
+$standardLicenseName = "emailStandard_createAlexID"
+$basicLicenseName = "emailBasic_createAlexID"
 
+class EmailUser {
+    [string]$samAccountName
+    [string]$license
+    [string]$emailRequired
+    [string]$sys_created_by
+    [string]$sys_created_on
+}
 
+function WriteToLog {
+    param([string]$logLineTime, [string]$writeTo, [string]$logCode)
+    $logFileDate = Get-Date -UFormat "%Y%m%d"
+    $logLineInfo = "`t$([Environment]::UserName)`t$([Environment]::MachineName)`t"
+    $logLine = $logLineTime
+    $logLine += $logLineInfo
+    $logLine += $logCode; $logLine += "`t"
+    $logLine += $writeTo
+    $logLine | Out-File -FilePath "C:\Logs\NewUserScript_$logFileDate.log" -Append -NoClobber
+    Return;
+}
+
+function OpenLog {
+    $logLineTime = (Get-Date).ToString()
+    $logCode = "Start"
+    $writeTo = "Starting New User script"
+    WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    Return;
+}
+
+function SortTheUserLicenses {
+    Import-Csv $pathToExcel | ForEach-Object {
+        $impUser = New-Object EmailUser;
+        $impUser.samAccountName = $_.firstName + "." + $_.lastName;
+        $impUser.license = $_.emailType;
+        $impUser.emailRequired = $_.emailRequired;
+        $impUser.sys_created_by = $_.sys_created_by;
+        $impUser.sys_created_on = $_.sys_created_on;
+        if ($impUser.emailRequired -eq "Yes") {
+            $usersFromExcel.Add($impUser.samAccountName.ToString());
+        }
+        if ($impUser.license -eq $standardLicenseName) {
+            $script:standardUsers.Add($impUser);
+        }
+        if ($impUser.license -eq $basicLicenseName) {
+            $script:basicUsers.Add($impUser);
+        }
+    }
+}
+
+function SendAnEmail {
+    param ([string]$subject, [string]$body, [string]$to, [string]$sys_created_on, [string]$sys_created_by) # "Joe Crockett <joseph.crockett@alexandriava.gov>"
+    try {
+    Send-MailMessage -To $to -From "New Office 365 Account <noreply@alexandriava.gov>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -ErrorAction Stop
+    $writeTo = "Send-MailMessage`t$subject`t$body`t$sys_created_on`t$sys_created_by"
+    $logCode = "Email"
+    $logLineTime = (Get-Date).ToString()
+    WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    } catch {
+        Send-MailMessage -To "Joe Crockett <joe.crockett@alexandriava.gov>" -From "ERROR: New Office 365 Account <noreply@alexandriava.gov>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -ErrorAction Stop
+        $writeTo = "Send-MailMessage`t$subject`t$body`t$sys_created_on"
+        $logCode = "Email"
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    }
+    Return;
+}
+
+function basicLicensePack {
+    $disabledPlans = @()
+    $disabledPlans += "YAMMER_ENTERPRISE"
+    $disabledPlans += "SWAY"
+    $O365License = New-MsolLicenseOptions -AccountSkuId alexandriava1:DESKLESSPACK -DisabledPlans $disabledPlans
+    Return $O365License;
+}
+function standardLicensePack {
+    $disabledPlans = @()
+    $disabledPlans += "YAMMER_ENTERPRISE"
+    $disabledPlans += "SWAY"
+    $O365License = New-MsolLicenseOptions -AccountSkuId alexandriava1:ENTERPRISEPACK -DisabledPlans $disabledPlans
+    Return $O365License;
+}
+
+function ValidateUsersUpn {
+    param([string]$user);
+    $arrayFromGet = @()
+    $arrayFromGet += Get-MsolUser -SearchString $user | Select-Object UserPrincipalName -ExpandProperty UserPrincipalName
+    if ($arrayFromGet.Count -eq 1) {
+        $upn = $arrayFromGet[0]
+        $writeTo = "Get-MsolUser`t$user`tSearchString returned: $upn"
+        $logCode = "Get"
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    }
+    else {
+        if ($arrayFromGet.Count -gt 1) {
+            $errMsg = "Either the samAccountName was empty, or the search returned more than one value."
+        }
+        else {
+            $errMsg = "The user $user cannot be found in MSOL, and has been removed from processing."
+        }
+        $writeTo = $errMsg
+        $logCode = "Else"
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        SendAnEmail -to "Joe Crockett <joe.crockett@alexandriava.gov>" -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
+        # Need to skip to the next iteration
+    }
+
+    if ($upn -like "*onmicrosoft*") {        
+        try {
+            Set-MsolUserPrincipalName -UserPrincipalName $upn -NewUserPrincipalName "$user@alexandriava.gov" -ErrorAction Stop  #### AGAIN, UPDATE IF GOING TO PROD
+            $writeTo = "Set-MsolUserPrincipalName: Successfully set upn to $user@alexandriava.gov"
+            $logCode = "Success"
+        }
+        catch {
+            $logCode = "Error"
+            "Set-MsolUserPrincipalName: $upn Error: $_" | Tee-Object -Variable writeTo
+        }    
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode        
+
+        $upn = Get-MsolUser -UserPrincipalName "$user@alexandriava.gov" | Select-Object UserPrincipalName -ExpandProperty UserPrincipalName
+        $script:upnArray.Add($upn)
+        Return;
+    }
+    elseif ($upn -like "*gov") {
+        $script:upnArray.Add($upn)
+        $writeTo = "Get-MsolUserPrincipalName: UPN need not be set"
+        $logCode = "Get"
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        Return;
+    }
+    else {
+        $writeTo = "The user $user cannot be found in MSOL, and has been removed from processing."
+        $logCode = "Error"
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        SendAnEmail -to "Joe Crockett <joe.crockett@alexandriava.gov>" -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
+        Return;
+    }
+}
+
+function SetLicense {
+    param([string]$upn, [string]$Licenses, [System.Object]$O365License, [string]$sys_created_by, [string]$licenseDisplayName);
+
+    $Location = (Get-MSOLUser -UserPrincipalName $upn).UsageLocation
+    if (!$Location) {
+        try {
+            Set-MsolUser -UserPrincipalName $upn -UsageLocation "US"
+            $writeTo = "Set-MsolUser: Successfully set location for $upn"
+            $logCode = "Success"
+        }
+        catch {
+            $logCode = "Error"
+            "Set-MsolUser: $upn Error: $_" | Tee-Object -Variable writeTo
+        }    
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    }
+
+    $LicenseLineItem = @()
+    $LicenseLineItem = (Get-MSOLUser -UserPrincipalName $upn).Licenses.AccountSkuId
+
+    if ($LicenseLineItem -contains "ALEXANDRIAVA1:ENTERPRISEPACK" -or $LicenseLineItem -contains "alexandriava1:DESKLESSPACK") {
+        $writeTo = "Get-MsolUserLicense: $upn already contains: $LicenseLineItem"
+        $logCode = "Get" 
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    }
+    else {
+        try {
+            Set-MsolUserLicense -UserPrincipalName $upn -AddLicenses $Licenses -LicenseOptions $O365License -ErrorAction Stop
+            $LicenseLineItem = (Get-MSOLUser -UserPrincipalName $upn).Licenses.AccountSkuId
+            try {
+                SendAnEmail -to $sys_created_by -subject "Account created for $upn" -body "An Office 365 account has been created for $upn. The account has been assigned a $licenseDisplayName license. This was requested by $sys_created_by on $sys_created_on. Please reach out to IT Services if you find an issue." -sys_created_on $sys_created_on -sys_created_by $sys_created_by -ErrorAction Stop
+            }
+            catch {
+                $writeTo = "SendAnEmail: $LicenseLineItem to $upn"
+                $logCode = "Error"
+                $logLineTime = (Get-Date).ToString()
+                WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            }
+            $writeTo = "Set-MsolUserLicense: Successfully added $LicenseLineItem to $upn"
+            $logCode = "Success"
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        }
+        catch {
+            $logCode = "Error"
+            "Set-MsolUserLicense: $upn Error: $_" | Tee-Object -Variable writeTo
+            $logLineTime = (Get-Date).ToString()
+            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+
+        }
+        if ($LicenseLineItem -contains "ALEXANDRIAVA1:DESKLESSPACK" ) {
+            try {
+                Set-MsolUserLicense -UserPrincipalName $upn -AddLicenses "ALEXANDRIAVA1:EXCHANGEARCHIVE_ADDON"
+                $writeTo = "Set-MsolUserLicense: identity $upn Archive"
+                $logCode = "Success"
+                $logLineTime = (Get-Date).ToString()
+                WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            }
+            catch {
+                $logCode = "Error"
+                "Set-Mailbox: FAILED adding Archive license TO $UPN" | Tee-Object -Variable writeTo
+                $logLineTime = (Get-Date).ToString()
+                WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            }    
+        }
+    }
+}
+
+function Set-CoaExoAttributes {
+    $script:upnArray = [System.Collections.Generic.List[System.Object]]::new();
+    $script:standardUsers = [System.Collections.Generic.List[System.Object]]::new();
+    $script:basicUsers = [System.Collections.Generic.List[System.Object]]::new();
+    [System.Object]$O365License;
+    OpenLog
+    ConnectToMsol
+    SortTheUserLicenses
+    foreach ($user in $usersFromExcel) {
+        ValidateUsersUpn -user $user
+    }
+    foreach ($upn in $script:upnArray) {
+        $local:baseUpn = $upn.Split("@")[0]
+        :outer
+        foreach ($user in $script:standardUsers) {
+            $samAccountName = $user.samAccountName.ToString()             
+            $sys_created_by = $user.sys_created_by.ToString()
+            if ($samAccountName -eq $local:baseUpn) {
+                $licenseDisplayName = "Standard"
+                $pack = standardLicensePack
+                $license = "alexandriava1:ENTERPRISEPACK"
+                SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
+                break :outer
+            }
+        }
+        foreach ($user in $script:basicUsers) {
+            $samAccountName = $user.samAccountName.ToString() 
+            $sys_created_by = $user.sys_created_by.ToString()
+            if ($samAccountName -eq $local:baseUpn) {
+                $licenseDisplayName = "Basic"
+                $pack = basicLicensePack
+                $license = "alexandriava1:DESKLESSPACK"
+                SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
+                break :outer
+            }
+        }
+    } 
+}
+#endregion
+#region: New-CoaUser
 function New-CoaUser {
     Param (
         [parameter(Mandatory = $true,
@@ -495,6 +751,6 @@ function New-CoaUser {
     $user.samAccountName = $samAccountName
     $global:UsersToWorkThrough.Add($user)
     Write-Output $global:UsersToWorkThrough
-    # Write-Output "Use New-CoaAssignments $UsersToWorkThrough to complete."
 }
-Export-ModuleMember -Function Set-CoaMailboxConfiguration, Set-CoaExchangeAttributes
+#endregion
+Export-ModuleMember -Function Set-CoaMailboxConfiguration, Set-CoaExchangeAttributes, Set-CoaExoAttributes, New-CoaUser
