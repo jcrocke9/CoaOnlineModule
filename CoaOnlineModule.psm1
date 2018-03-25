@@ -476,20 +476,18 @@ function Set-CoaExchangeAttributes {
 }
 #endregion
 #region: Sets ExO Attributes
-$usersFromExcel = [System.Collections.Generic.List[System.Object]]::new();
-$pathToExcel = "C:\csv\createAlexID.csv"
 $standardLicenseName = "emailStandard_createAlexID"
 $basicLicenseName = "emailBasic_createAlexID"
 
-class EmailUser {
+<# class EmailUser {
     [string]$samAccountName
     [string]$license
     [string]$emailRequired
     [string]$sys_created_by
     [string]$sys_created_on
-}
+} #>
 
-function WriteToLog {
+<# function WriteToLog {
     param([string]$logLineTime, [string]$writeTo, [string]$logCode)
     $logFileDate = Get-Date -UFormat "%Y%m%d"
     $logLineInfo = "`t$([Environment]::UserName)`t$([Environment]::MachineName)`t"
@@ -499,7 +497,7 @@ function WriteToLog {
     $logLine += $writeTo
     $logLine | Out-File -FilePath "C:\Logs\NewUserScript_$logFileDate.log" -Append -NoClobber
     Return;
-}
+} #>
 
 function OpenLog {
     $logLineTime = (Get-Date).ToString()
@@ -509,7 +507,7 @@ function OpenLog {
     Return;
 }
 
-function SortTheUserLicenses {
+<# function SortTheUserLicenses {
     Import-Csv $pathToExcel | ForEach-Object {
         $impUser = New-Object EmailUser;
         $impUser.samAccountName = $_.firstName + "." + $_.lastName;
@@ -520,24 +518,20 @@ function SortTheUserLicenses {
         if ($impUser.emailRequired -eq "Yes") {
             $usersFromExcel.Add($impUser.samAccountName.ToString());
         }
-        if ($impUser.license -eq $standardLicenseName) {
-            $script:standardUsers.Add($impUser);
-        }
-        if ($impUser.license -eq $basicLicenseName) {
-            $script:basicUsers.Add($impUser);
-        }
+        
     }
-}
+} #>
 
 function SendAnEmail {
     param ([string]$subject, [string]$body, [string]$to, [string]$sys_created_on, [string]$sys_created_by) # "Joe Crockett <joseph.crockett@alexandriava.gov>"
     try {
-    Send-MailMessage -To $to -From "New Office 365 Account <noreply@alexandriava.gov>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -ErrorAction Stop
-    $writeTo = "Send-MailMessage`t$subject`t$body`t$sys_created_on`t$sys_created_by"
-    $logCode = "Email"
-    $logLineTime = (Get-Date).ToString()
-    WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-    } catch {
+        Send-MailMessage -To $to -From "New Office 365 Account <noreply@alexandriava.gov>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -ErrorAction Stop
+        $writeTo = "Send-MailMessage`t$subject`t$body`t$sys_created_on`t$sys_created_by"
+        $logCode = "Email"
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    }
+    catch {
         Send-MailMessage -To "Joe Crockett <joe.crockett@alexandriava.gov>" -From "ERROR: New Office 365 Account <noreply@alexandriava.gov>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -ErrorAction Stop
         $writeTo = "Send-MailMessage`t$subject`t$body`t$sys_created_on"
         $logCode = "Email"
@@ -563,7 +557,8 @@ function standardLicensePack {
 }
 
 function ValidateUsersUpn {
-    param([string]$user);
+    param([UserObject]$SingleUser);   # NeedTo: either switch this to an object, or ......
+    $user = $SingleUser.samAccountName;
     $arrayFromGet = @()
     $arrayFromGet += Get-MsolUser -SearchString $user | Select-Object UserPrincipalName -ExpandProperty UserPrincipalName
     if ($arrayFromGet.Count -eq 1) {
@@ -602,11 +597,11 @@ function ValidateUsersUpn {
         WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode        
 
         $upn = Get-MsolUser -UserPrincipalName "$user@alexandriava.gov" | Select-Object UserPrincipalName -ExpandProperty UserPrincipalName
-        $script:upnArray.Add($upn)
+        $script:upnArray.Add($SingleUser)
         Return;
     }
     elseif ($upn -like "*gov") {
-        $script:upnArray.Add($upn)
+        $script:upnArray.Add($SingleUser)
         $writeTo = "Get-MsolUserPrincipalName: UPN need not be set"
         $logCode = "Get"
         $logLineTime = (Get-Date).ToString()
@@ -694,22 +689,41 @@ function SetLicense {
 }
 
 function Set-CoaExoAttributes {
-    $script:upnArray = [System.Collections.Generic.List[System.Object]]::new();
+    Param (
+        [parameter(
+            Position = 0,
+            ValueFromPipeline = $false)]
+        [System.Collections.Generic.List[UserObject]]
+        $UserList = $global:UsersToWorkThrough,
+        [parameter(
+            Position = 1,
+            ValueFromPipeline = $true)]    
+        [UserObject]
+        $SingleUser
+    )
+    $script:upnArray = [System.Collections.Generic.List[UserObject]]::new();
     $script:standardUsers = [System.Collections.Generic.List[System.Object]]::new();
     $script:basicUsers = [System.Collections.Generic.List[System.Object]]::new();
     [System.Object]$O365License;
     OpenLog
-    ConnectToMsol
-    SortTheUserLicenses
-    foreach ($user in $usersFromExcel) {
+    
+    foreach ($user in $UserList) {
         ValidateUsersUpn -user $user
+        if ($user.license -eq $standardLicenseName) {
+            $script:standardUsers.Add($user);
+        }
+        if ($user.license -eq $basicLicenseName) {
+            $script:basicUsers.Add($user);
+        }
     }
+    
+
     foreach ($upn in $script:upnArray) {
         $local:baseUpn = $upn.Split("@")[0]
         :outer
         foreach ($user in $script:standardUsers) {
             $samAccountName = $user.samAccountName.ToString()             
-            $sys_created_by = $user.sys_created_by.ToString()
+            $sys_created_by = $env:USERNAME.ToString();
             if ($samAccountName -eq $local:baseUpn) {
                 $licenseDisplayName = "Standard"
                 $pack = standardLicensePack
