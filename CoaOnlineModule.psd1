@@ -8,7 +8,7 @@
 
 @{
     # Script module or binary module file associated with this manifest
-    ModuleToProcess = 'CoaOnlineModule.psm1'
+    ModuleToProcess   = '.\CoaOnlineModule.psm1'
 
     # Script module or binary module file associated with this manifest
     #RootModule = ''
@@ -41,5 +41,46 @@
     # PowerShellHostVersion = ''
     
     # Modules that must be imported into the global environment prior to importing this module
-    RequiredModules = @(CoaLoggingModule)
+    RequiredModules   = @(CoaLoggingModule)
+
+    # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
+    FunctionsToExport = "Set-CoaMailboxConfiguration", "Set-CoaExchangeAttributes", "Set-CoaExoAttributes", "New-CoaUser"
+    # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
+
+    CmdletsToExport   = @()
+
+    # Variables to export from this module
+    # VariablesToExport = @()
+
+    # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
+    AliasesToExport   = @()
+
+    # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
+    PrivateData       = @{
+
+        PSData = @{
+
+            # Tags applied to this module. These help with module discovery in online galleries.
+            Tags         = @('O365', 'MSOL', 'License', 'Management', 'SKU', 'Plan', 'AzueAD', 'Bulk')
+
+            # A URL to the license for this module.
+            # LicenseUri = ''
+
+            # A URL to the main website for this project.
+            # ProjectUri = ''
+
+            # A URL to an icon representing this module.
+            # IconUri = ''
+
+            # ReleaseNotes of this module
+            ReleaseNotes = '1.0.1 Initial Release'
+
+            # External dependent modules of this module
+            # ExternalModuleDependencies = ''
+
+        } # End of PSData hashtable
+    
+    } # End of PrivateData hashtable
+
+
 }

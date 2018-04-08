@@ -6,7 +6,71 @@ using namespace System.Diagnostics;
 using namespace System.Linq;
 using namespace System.Collections.Generic;
 Import-Module ActiveDirectory;
-Import-Module -Name C:\alex\CoaModule\CoaLoggingModule.psm1 -Function Add-CoaWriteToLog
+Import-Module -Name C:\alex\CoaOnlineModule\CoaLoggingModule.psm1 -Function Add-CoaWriteToLog
+<#
+    .Synopsis
+    Use this cmdlet to set new variables over the default ones.
+
+    .Description
+    Sets the script variables that are in common use across the functions
+#>
+function Set-CoaVariables {
+    Param (
+        # Default -120. The number of days backward (negative) in time to gather new accounts and ensure they are in-policy.
+        [Parameter()]
+        [int]
+        $NumberOfDays = -120,
+        [string]$FileName = "MailboxConfiguration",
+        [string]$RoleAssignmentPolicy = "COA Default Role Assignment Policy",
+        [string]$ClientAccessPolicyName = "COAOWAMailboxPolicy",
+        [int]$LitigationHoldDuration = 1,
+        [string]$ExchangeOnlineAdminAccount = "COA Administrator",
+        [string]$RetentionPolicyE3 = "COA Policy",
+        [string]$RetentionPolicyK1 = "COA F1 Policy",
+        [string]$CoaSkuInformationWorkers = "ALEXANDRIAVA1:ENTERPRISEPACK_GOV",
+        [string]$CoaSkuFirstlineWorkers = "ALEXANDRIAVA1:DESKLESSPACK_GOV",
+        [string]$standardLicenseName = "emailStandard_createAlexID",
+        [string]$basicLicenseName = "emailBasic_createAlexID",
+        [string]$Domain = "alexandriava.gov"
+    )
+    $Script:NumberOfDays = $NumberOfDays;
+    $Script:FileName = $FileName
+    $Script:RoleAssignmentPolicy = $RoleAssignmentPolicy
+    $Script:ClientAccessPolicyName = $ClientAccessPolicyName
+    $Script:LitigationHoldDuration = $LitigationHoldDuration
+    $Script:ExchangeOnlineAdminAccount = $ExchangeOnlineAdminAccount
+    $Script:RetentionPolicyE3 = $RetentionPolicyE3
+    $Script:RetentionPolicyK1 = $RetentionPolicyK1
+    $Script:CoaSkuInformationWorkers = $CoaSkuInformationWorkers
+    $Script:CoaSkuFirstlineWorkers = $CoaSkuFirstlineWorkers
+    $Script:StandardLicenseName = $standardLicenseName
+    $Script:BasicLicenseName = $basicLicenseName
+    $Script:Domain = $Domain
+}
+<#
+    .Synopsis
+    Use this cmdlet to view new variables over the default ones.
+
+    .Description
+    View the script variables that are in common use across the functions
+#>
+function Get-CoaVariables {
+    $Private:CoaVariables = [ordered]@{
+        NumberOfDays = $Script:NumberOfDays;
+        FileName = $Script:FileName;
+        RoleAssignmentPolicy = $Script:RoleAssignmentPolicy;
+        ClientAccessPolicyName = $Script:ClientAccessPolicyName;
+        LitigationHoldDuration = $Script:LitigationHoldDuration;
+        ExchangeOnlineAdminAccount = $Script:ExchangeOnlineAdminAccount;
+        RetentionPolicyE3 = $Script:RetentionPolicyE3;
+        RetentionPolicyK1 = $Script:RetentionPolicyK1;
+        CoaSkuInformationWorkers = $Script:CoaSkuInformationWorkers;
+        CoaSkuFirstlineWorkers = $Script:CoaSkuFirstlineWorkers;
+        standardLicenseName = $Script:StandardLicenseName;
+        basicLicenseName = $Script:BasicLicenseName;
+    }
+    Write-Output $Private:CoaVariables
+}
 <#
     .Synopsis
     Post-creation Exchange Online mailbox configuration for new accounts.
@@ -30,16 +94,16 @@ function Set-CoaMailboxConfiguration {
         # Default -120. The number of days backward (negative) in time to gather new accounts and ensure they are in-policy.
         [Parameter()]
         [int]
-        $NumberOfDays = -120,
-        [string]$FileName = "MailboxConfiguration",
-        [string]$RoleAssignmentPolicy = "COA Default Role Assignment Policy",
-        [string]$ClientAccessPolicyName = "COAOWAMailboxPolicy",
-        [int]$LitigationHoldDuration = 1,
-        [string]$ExchangeOnlineAdminAccount = "COA Administrator",
-        [string]$RetentionPolicyE3 = "COA Policy",
-        [string]$RetentionPolicyK1 = "COA F1 Policy",
-        [string]$CoaSkuInformationWorkers = "ALEXANDRIAVA1:ENTERPRISEPACK",
-        [string]$CoaSkuFirstlineWorkers = "ALEXANDRIAVA1:DESKLESSPACK"
+        $NumberOfDays = $Script:NumberOfDays,
+        [string]$FileName = $Script:FileName,
+        [string]$RoleAssignmentPolicy = $Script:RoleAssignmentPolicy,
+        [string]$ClientAccessPolicyName = $Script:ClientAccessPolicyName,
+        [int]$LitigationHoldDuration = $Script:LitigationHoldDUration,
+        [string]$ExchangeOnlineAdminAccount = $Script:ExchangeOnlineAdminAccount,
+        [string]$RetentionPolicyE3 = $Script:RetentionPolicyE3,
+        [string]$RetentionPolicyK1 = $Script:RetentionPolicyK1,
+        [string]$CoaSkuInformationWorkers = $Script:CoaSkuInformationWorkers,
+        [string]$CoaSkuFirstlineWorkers = $Script:CoaSkuFirstlineWorkers
     )
     $logCode = "Start"
     $writeTo = "Starting Mailbox Configuration Script"
@@ -220,8 +284,8 @@ function OpenLog {
 }
 function SendAnEmail {
     param ([string]$subject, [string]$body)
-    $emailAddress = "$([Environment]::UserName)@alexandriava.gov"
-    $emailFromAddress = "COA New User Module `<noreply@alexandriava.gov`>"
+    $emailAddress = "$([Environment]::UserName)@$Script:Domain"
+    $emailFromAddress = "COA New User Module `<noreply@$Script:Domain`>"
     Send-MailMessage -To $emailAddress -From $emailFromAddress -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -Port 25
     $writeTo = "Send-MailMessage`t$subject`t$body"
     $logCode = "Email"
@@ -285,8 +349,8 @@ function SetMailAndSmtpAttributes {
     $mail = Get-ADUser $user -Properties mail | Select-Object mail -ExpandProperty mail
     if (!$mail) {
         try {
-            Set-ADUser -Identity $user -EmailAddress "$user@alexandriava.gov" -ErrorAction Stop
-            $writeTo = "Set-ADUser: Successfully added email address to $user@alexandriava.gov"
+            Set-ADUser -Identity $user -EmailAddress "$user@$Script:Domain" -ErrorAction Stop
+            $writeTo = "Set-ADUser: Successfully added email address to $user@$Script:Domain"
             $logCode = "Success"
         }
         catch {
@@ -395,7 +459,7 @@ class UserObject {
     [string]$samAccountName
     [string]$License
 }
-$global:UsersToWorkThrough = [System.Collections.Generic.List[UserObject]]::new();
+$global:CoaUsersToWorkThrough = [System.Collections.Generic.List[UserObject]]::new();
 <#
     .Synopsis
     Sets new mailbox accounts up with the standard policies of COA
@@ -424,7 +488,7 @@ function Set-CoaExchangeAttributes {
             Position = 0,
             ValueFromPipeline = $false)]
         [System.Collections.Generic.List[UserObject]]
-        $UserList = $global:UsersToWorkThrough,
+        $UserList = $global:CoaUsersToWorkThrough,
         [parameter(
             Position = 1,
             ValueFromPipeline = $true)]    
@@ -434,21 +498,19 @@ function Set-CoaExchangeAttributes {
     $problemUsers = [System.Collections.Generic.List[System.Object]]::new();    
     # $standardUsers = [System.Collections.Generic.List[System.Object]]::new();
     # $basicUsers = [System.Collections.Generic.List[System.Object]]::new();
-    # $standardLicenseName = "emailStandard_createAlexID"
-    $basicLicenseName = "emailBasic_createAlexID"
 
     OpenLog
     if ($SingleUser) {
         QueryAdToValidateUsers -samAccountName $SingleUser.samAccountName
         # Remove problem users
         SetMailAndSmtpAttributes -user $SingleUser.samAccountName
-        if ($SingleUser.License -eq $basicLicenseName) {
+        if ($SingleUser.License -eq $Script:BasicLicenseName) {
             SetLicenseAttributeK1 -user $SingleUser.samAccountName
         }
         else {
             SetLicenseAttributeE3 -user $SingleUser.samAccountName
         }
-        $global:UsersToWorkThrough.Remove($SingleUser);
+        $global:CoaUsersToWorkThrough.Remove($SingleUser);
     }
     else {
         foreach ($samAccountName in $UserList ) {
@@ -464,20 +526,18 @@ function Set-CoaExchangeAttributes {
         }
 
         foreach ($user in $UserList) {
-            if ($user.License -eq $basicLicenseName) {
+            if ($user.License -eq $Script:BasicLicenseName) {
                 SetLicenseAttributeK1 -user $user.samAccountName
             }
             else {
                 SetLicenseAttributeE3 -user $user.samAccountName
             }
         }
-        $global:UsersToWorkThrough.Clear()
+        $global:CoaUsersToWorkThrough.Clear()
     }
 }
 #endregion
 #region: Sets ExO Attributes
-$standardLicenseName = "emailStandard_createAlexID"
-$basicLicenseName = "emailBasic_createAlexID"
 
 <# class EmailUser {
     [string]$samAccountName
@@ -523,16 +583,16 @@ function OpenLog {
 } #>
 
 function SendAnEmail {
-    param ([string]$subject, [string]$body, [string]$to, [string]$sys_created_on, [string]$sys_created_by) # "Joe Crockett <joseph.crockett@alexandriava.gov>"
+    param ([string]$subject, [string]$body, [string]$to, [string]$sys_created_on, [string]$sys_created_by) # "Joe Crockett <joseph.crockett@$Script:Domain>"
     try {
-        Send-MailMessage -To $to -From "New Office 365 Account <noreply@alexandriava.gov>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -ErrorAction Stop
+        Send-MailMessage -To $to -From "New Office 365 Account <noreply@$Script:Domain>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -ErrorAction Stop
         $writeTo = "Send-MailMessage`t$subject`t$body`t$sys_created_on`t$sys_created_by"
         $logCode = "Email"
         $logLineTime = (Get-Date).ToString()
         WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
     }
     catch {
-        Send-MailMessage -To "Joe Crockett <joe.crockett@alexandriava.gov>" -From "ERROR: New Office 365 Account <noreply@alexandriava.gov>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -ErrorAction Stop
+        Send-MailMessage -To "Joe Crockett <joe.crockett@$Script:Domain>" -From "ERROR: New Office 365 Account <noreply@$Script:Domain>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -ErrorAction Stop
         $writeTo = "Send-MailMessage`t$subject`t$body`t$sys_created_on"
         $logCode = "Email"
         $logLineTime = (Get-Date).ToString()
@@ -543,21 +603,18 @@ function SendAnEmail {
 
 function basicLicensePack {
     $disabledPlans = @()
-    $disabledPlans += "YAMMER_ENTERPRISE"
-    $disabledPlans += "SWAY"
-    $O365License = New-MsolLicenseOptions -AccountSkuId alexandriava1:DESKLESSPACK -DisabledPlans $disabledPlans
+    $O365License = New-MsolLicenseOptions -AccountSkuId $Script:CoaSkuFirstlineWorkers -DisabledPlans $disabledPlans
     Return $O365License;
 }
 function standardLicensePack {
     $disabledPlans = @()
     $disabledPlans += "YAMMER_ENTERPRISE"
-    $disabledPlans += "SWAY"
-    $O365License = New-MsolLicenseOptions -AccountSkuId alexandriava1:ENTERPRISEPACK -DisabledPlans $disabledPlans
+    $O365License = New-MsolLicenseOptions -AccountSkuId $Script:CoaSkuInformationWorkers -DisabledPlans $disabledPlans
     Return $O365License;
 }
 
-function ValidateUsersUpn {
-    param([UserObject]$SingleUser);   # NeedTo: either switch this to an object, or ......
+function Set-ValidateUsersUpn {
+    param([UserObject]$SingleUser); # NeedTo: either switch this to an object, or ......
     $user = $SingleUser.samAccountName;
     $arrayFromGet = @()
     $arrayFromGet += Get-MsolUser -SearchString $user | Select-Object UserPrincipalName -ExpandProperty UserPrincipalName
@@ -579,14 +636,14 @@ function ValidateUsersUpn {
         $logCode = "Else"
         $logLineTime = (Get-Date).ToString()
         WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-        SendAnEmail -to "Joe Crockett <joe.crockett@alexandriava.gov>" -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
+        SendAnEmail -to "Joe Crockett <joe.crockett@$Script:Domain>" -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
         # Need to skip to the next iteration
     }
 
     if ($upn -like "*onmicrosoft*") {        
         try {
-            Set-MsolUserPrincipalName -UserPrincipalName $upn -NewUserPrincipalName "$user@alexandriava.gov" -ErrorAction Stop  #### AGAIN, UPDATE IF GOING TO PROD
-            $writeTo = "Set-MsolUserPrincipalName: Successfully set upn to $user@alexandriava.gov"
+            Set-MsolUserPrincipalName -UserPrincipalName $upn -NewUserPrincipalName "$user@$Script:Domain" -ErrorAction Stop  #### AGAIN, UPDATE IF GOING TO PROD
+            $writeTo = "Set-MsolUserPrincipalName: Successfully set upn to $user@$Script:Domain"
             $logCode = "Success"
         }
         catch {
@@ -596,7 +653,7 @@ function ValidateUsersUpn {
         $logLineTime = (Get-Date).ToString()
         WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode        
 
-        $upn = Get-MsolUser -UserPrincipalName "$user@alexandriava.gov" | Select-Object UserPrincipalName -ExpandProperty UserPrincipalName
+        $upn = Get-MsolUser -UserPrincipalName "$user@$Script:Domain" | Select-Object UserPrincipalName -ExpandProperty UserPrincipalName
         $script:upnArray.Add($SingleUser)
         Return;
     }
@@ -613,7 +670,7 @@ function ValidateUsersUpn {
         $logCode = "Error"
         $logLineTime = (Get-Date).ToString()
         WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-        SendAnEmail -to "Joe Crockett <joe.crockett@alexandriava.gov>" -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
+        SendAnEmail -to "Joe Crockett <joe.crockett@$Script:Domain>" -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
         Return;
     }
 }
@@ -639,7 +696,7 @@ function SetLicense {
     $LicenseLineItem = @()
     $LicenseLineItem = (Get-MSOLUser -UserPrincipalName $upn).Licenses.AccountSkuId
 
-    if ($LicenseLineItem -contains "ALEXANDRIAVA1:ENTERPRISEPACK" -or $LicenseLineItem -contains "alexandriava1:DESKLESSPACK") {
+    if ($LicenseLineItem -contains $Script:CoaSkuInformationWorkers -or $LicenseLineItem -contains $Script:CoaSkuFirstlineWorkers) {
         $writeTo = "Get-MsolUserLicense: $upn already contains: $LicenseLineItem"
         $logCode = "Get" 
         $logLineTime = (Get-Date).ToString()
@@ -670,7 +727,7 @@ function SetLicense {
             WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
 
         }
-        if ($LicenseLineItem -contains "ALEXANDRIAVA1:DESKLESSPACK" ) {
+        if ($LicenseLineItem -contains $Script:CoaSkuFirstlineWorkers ) {
             try {
                 Set-MsolUserLicense -UserPrincipalName $upn -AddLicenses "ALEXANDRIAVA1:EXCHANGEARCHIVE_ADDON"
                 $writeTo = "Set-MsolUserLicense: identity $upn Archive"
@@ -694,7 +751,7 @@ function Set-CoaExoAttributes {
             Position = 0,
             ValueFromPipeline = $false)]
         [System.Collections.Generic.List[UserObject]]
-        $UserList = $global:UsersToWorkThrough,
+        $UserList = $global:CoaUsersToWorkThrough,
         [parameter(
             Position = 1,
             ValueFromPipeline = $true)]    
@@ -708,26 +765,27 @@ function Set-CoaExoAttributes {
     OpenLog
     
     foreach ($user in $UserList) {
-        ValidateUsersUpn -user $user
-        if ($user.license -eq $standardLicenseName) {
+        Set-ValidateUsersUpn -SingleUser $user
+        if ($user.license -eq $Script:StandardLicenseName) {
             $script:standardUsers.Add($user);
         }
-        if ($user.license -eq $basicLicenseName) {
+        if ($user.license -eq $Script:BasicLicenseName) {
             $script:basicUsers.Add($user);
         }
     }
     
 
     foreach ($upn in $script:upnArray) {
-        $local:baseUpn = $upn.Split("@")[0]
+        $local:samAccountNameObject = $upn.samAccountName.ToString()
+        $local:baseUpn = $local:samAccountNameObject.Split("@")[0]
         :outer
         foreach ($user in $script:standardUsers) {
             $samAccountName = $user.samAccountName.ToString()             
-            $sys_created_by = $env:USERNAME.ToString();
+            $sys_created_by = $env:USERNAME.ToString()
             if ($samAccountName -eq $local:baseUpn) {
                 $licenseDisplayName = "Standard"
                 $pack = standardLicensePack
-                $license = "alexandriava1:ENTERPRISEPACK"
+                $license = $Script:CoaSkuInformationWorkers
                 SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
                 break :outer
             }
@@ -738,7 +796,7 @@ function Set-CoaExoAttributes {
             if ($samAccountName -eq $local:baseUpn) {
                 $licenseDisplayName = "Basic"
                 $pack = basicLicensePack
-                $license = "alexandriava1:DESKLESSPACK"
+                $license = $Script:CoaSkuFirstlineWorkers
                 SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
                 break :outer
             }
@@ -757,14 +815,16 @@ function New-CoaUser {
     $user = $null
     $user = [UserObject]::new()
     if ($Firstline) {
-        $user.License = "emailBasic_createAlexID"
+        $user.License = $Script:BasicLicenseName
     }
     else {
-        $user.License = "emailStandard_createAlexID"
+        $user.License = $Script:StandardLicenseName
     }
     $user.samAccountName = $samAccountName
-    $global:UsersToWorkThrough.Add($user)
-    Write-Output $global:UsersToWorkThrough
+    $global:CoaUsersToWorkThrough.Add($user)
+    Write-Output $global:CoaUsersToWorkThrough
 }
+
 #endregion
-Export-ModuleMember -Function Set-CoaMailboxConfiguration, Set-CoaExchangeAttributes, Set-CoaExoAttributes, New-CoaUser
+Set-CoaVariables
+Export-ModuleMember -Function Set-CoaMailboxConfiguration, Set-CoaExchangeAttributes, Set-CoaExoAttributes, New-CoaUser, Get-CoaVariables, Set-CoaVariables
