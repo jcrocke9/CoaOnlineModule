@@ -68,6 +68,7 @@ function Get-CoaVariables {
         CoaSkuFirstlineWorkers = $Script:CoaSkuFirstlineWorkers;
         standardLicenseName = $Script:StandardLicenseName;
         basicLicenseName = $Script:BasicLicenseName;
+        Domain = $Script:Domain;
     }
     Write-Output $Private:CoaVariables
 }
@@ -533,7 +534,7 @@ function Set-CoaExchangeAttributes {
                 SetLicenseAttributeE3 -user $user.samAccountName
             }
         }
-        $global:CoaUsersToWorkThrough.Clear()
+        # $global:CoaUsersToWorkThrough.Clear()
     }
 }
 #endregion
@@ -614,7 +615,7 @@ function standardLicensePack {
 }
 
 function Set-ValidateUsersUpn {
-    param([UserObject]$SingleUser); # NeedTo: either switch this to an object, or ......
+    param([UserObject]$SingleUser); 
     $user = $SingleUser.samAccountName;
     $arrayFromGet = @()
     $arrayFromGet += Get-MsolUser -SearchString $user | Select-Object UserPrincipalName -ExpandProperty UserPrincipalName
@@ -642,7 +643,7 @@ function Set-ValidateUsersUpn {
 
     if ($upn -like "*onmicrosoft*") {        
         try {
-            Set-MsolUserPrincipalName -UserPrincipalName $upn -NewUserPrincipalName "$user@$Script:Domain" -ErrorAction Stop  #### AGAIN, UPDATE IF GOING TO PROD
+            Set-MsolUserPrincipalName -UserPrincipalName $upn -NewUserPrincipalName "$user@$Script:Domain" -ErrorAction Stop
             $writeTo = "Set-MsolUserPrincipalName: Successfully set upn to $user@$Script:Domain"
             $logCode = "Success"
         }
@@ -657,7 +658,7 @@ function Set-ValidateUsersUpn {
         $script:upnArray.Add($SingleUser)
         Return;
     }
-    elseif ($upn -like "*gov") {
+    elseif ($upn -like "*$Script:Domain") {
         $script:upnArray.Add($SingleUser)
         $writeTo = "Get-MsolUserPrincipalName: UPN need not be set"
         $logCode = "Get"
@@ -774,10 +775,12 @@ function Set-CoaExoAttributes {
         }
     }
     
-
-    foreach ($upn in $script:upnArray) {
-        $local:samAccountNameObject = $upn.samAccountName.ToString()
-        $local:baseUpn = $local:samAccountNameObject.Split("@")[0]
+    foreach ($upnFO in $script:upnArray) {
+        $upn = $upnFO.samAccountName.ToString()
+        $upn += "@"
+        $upn += $Script:Domain
+        $local:baseUpn = $upnFO.samAccountName.ToString()
+        Add-CoaWriteToLog -writeTo "$local:baseUpn`t$upn" -logCode "Info" -FileName "NewUserScript"
         :outer
         foreach ($user in $script:standardUsers) {
             $samAccountName = $user.samAccountName.ToString()             
@@ -787,17 +790,19 @@ function Set-CoaExoAttributes {
                 $pack = standardLicensePack
                 $license = $Script:CoaSkuInformationWorkers
                 SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
+                $global:CoaUsersToWorkThrough.Remove($upnFO);
                 break :outer
             }
         }
         foreach ($user in $script:basicUsers) {
             $samAccountName = $user.samAccountName.ToString() 
-            $sys_created_by = $user.sys_created_by.ToString()
+            $sys_created_by = $env:USERNAME.ToString();
             if ($samAccountName -eq $local:baseUpn) {
                 $licenseDisplayName = "Basic"
                 $pack = basicLicensePack
                 $license = $Script:CoaSkuFirstlineWorkers
                 SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
+                $global:CoaUsersToWorkThrough.Remove($upnFO);
                 break :outer
             }
         }
@@ -824,7 +829,28 @@ function New-CoaUser {
     $global:CoaUsersToWorkThrough.Add($user)
     Write-Output $global:CoaUsersToWorkThrough
 }
-
+function Remove-CoaUser {
+    param(
+        [parameter(Mandatory = $true,
+            Position = 0)]
+            [string]$SamAccountName
+    )
+    $upn = Get-MsolUser -SearchString $SamAccountName | Select-Object -ExpandProperty UserPrincipalName
+    Add-CoaWriteToLog -writeTo "Get-MsolUser`t$upn" -logCode "Success" -FileName "RemoveUserScript"    
+    $LicenseLineItem = (Get-MSOLUser -UserPrincipalName $upn).Licenses.AccountSkuId
+    Add-CoaWriteToLog -writeTo "Get-MsolUser`t$upn`t$LicenseLineItem" -logCode "Success" -FileName "RemoveUserScript"
+    try {
+        Set-MsolUserLicense -UserPrincipalName $upn -RemoveLicenses $LicenseLineItem -ErrorAction Stop -ErrorVariable err
+        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$LicenseLineItem" -logCode "Success" -FileName "RemoveUserScript"
+    }
+    catch {
+        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$licenses`t$err" -logCode "Error" -FileName "RemoveUserScript"
+    }
+    
+}
+function Clear-CoaUser {
+    $global:CoaUsersToWorkThrough.Clear()
+}
 #endregion
 Set-CoaVariables
-Export-ModuleMember -Function Set-CoaMailboxConfiguration, Set-CoaExchangeAttributes, Set-CoaExoAttributes, New-CoaUser, Get-CoaVariables, Set-CoaVariables
+Export-ModuleMember -Function Set-CoaMailboxConfiguration, Set-CoaExchangeAttributes, Set-CoaExoAttributes, New-CoaUser, Get-CoaVariables, Set-CoaVariables, Clear-CoaUser, Remove-CoaUser

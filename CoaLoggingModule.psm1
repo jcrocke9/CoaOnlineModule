@@ -25,7 +25,7 @@ function Add-CoaWriteToLog {
     param(
         [string]$writeTo, 
         [string]$logCode,
-        [string]$FilePath = "\\Its01\deptfiles\Its\EmailTeam\Logs\",
+        [string]$FilePath = "C:\Logs\",
         [parameter(Mandatory = $true)][string]$FileName = "noNameLog"
     )
     $logLineTime = (Get-Date).ToString() 
@@ -37,9 +37,9 @@ function Add-CoaWriteToLog {
     $logLine += $logCode; $logLine += "`t"
     $logLine += $writeTo
     $logLine | Out-File -FilePath "$FilePath$FileName`_$logFileDate.log" -Append -NoClobber
-    Clear-Variable logLine -Scope global
-    Clear-Variable writeTo -Scope global
-    Clear-Variable logLineTime -Scope global
-    Clear-Variable logCode -Scope global
+    Clear-Variable logLine
+    Clear-Variable writeTo
+    Clear-Variable logLineTime
+    Clear-Variable logCode
 }
 Export-ModuleMember -Function Add-CoaWriteToLog
