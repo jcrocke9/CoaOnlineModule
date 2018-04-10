@@ -29,6 +29,7 @@ function Set-CoaVariables {
         [string]$RetentionPolicyK1 = "COA F1 Policy",
         [string]$CoaSkuInformationWorkers = "ALEXANDRIAVA1:ENTERPRISEPACK_GOV",
         [string]$CoaSkuFirstlineWorkers = "ALEXANDRIAVA1:DESKLESSPACK_GOV",
+        [string]$CoaSkuExoArchive = "ALEXANDRIAVA1:EXCHANGEARCHIVE_ADDON",
         [string]$standardLicenseName = "emailStandard_createAlexID",
         [string]$basicLicenseName = "emailBasic_createAlexID",
         [string]$Domain = "alexandriava.gov"
@@ -43,6 +44,7 @@ function Set-CoaVariables {
     $Script:RetentionPolicyK1 = $RetentionPolicyK1
     $Script:CoaSkuInformationWorkers = $CoaSkuInformationWorkers
     $Script:CoaSkuFirstlineWorkers = $CoaSkuFirstlineWorkers
+    $Script:CoaSkuExoArchive = $CoaSkuExoArchive
     $Script:StandardLicenseName = $standardLicenseName
     $Script:BasicLicenseName = $basicLicenseName
     $Script:Domain = $Domain
@@ -66,6 +68,7 @@ function Get-CoaVariables {
         RetentionPolicyK1          = $Script:RetentionPolicyK1;
         CoaSkuInformationWorkers   = $Script:CoaSkuInformationWorkers;
         CoaSkuFirstlineWorkers     = $Script:CoaSkuFirstlineWorkers;
+        CoaSkuExoArchive = $Script:CoaSkuExoArchive
         standardLicenseName        = $Script:StandardLicenseName;
         basicLicenseName           = $Script:BasicLicenseName;
         Domain                     = $Script:Domain;
@@ -698,7 +701,7 @@ function SetLicense {
         }
         if ($LicenseLineItem -contains $Script:CoaSkuFirstlineWorkers ) {
             try {
-                Set-MsolUserLicense -UserPrincipalName $upn -AddLicenses "ALEXANDRIAVA1:EXCHANGEARCHIVE_ADDON"
+                Set-MsolUserLicense -UserPrincipalName $upn -AddLicenses $Script:CoaSkuExoArchive
                 $writeTo = "Set-MsolUserLicense: identity $upn Archive"
                 $logCode = "Success"
                 $logLineTime = (Get-Date).ToString()
@@ -802,10 +805,7 @@ function Remove-CoaUser {
         [parameter(Mandatory = $true,
             Position = 0)]
         [string]$SamAccountName
-    )
-    $upn = Get-MsolUser -SearchString $SamAccountName | Select-Object -ExpandProperty UserPrincipalName
-    Add-CoaWriteToLog -writeTo "Get-MsolUser`t$upn" -logCode "Success" -FileName "RemoveUserScript"    
-    
+    )    
     #region
     [string]$upn = ""
     $arrayFromGet = @()
@@ -833,6 +833,7 @@ function Remove-CoaUser {
         break
     }
     #endregion
+    $LicenseLineItem
     $LicenseLineItem = (Get-MSOLUser -UserPrincipalName $upn).Licenses.AccountSkuId
     Add-CoaWriteToLog -writeTo "Get-MsolUser`t$upn`t$LicenseLineItem" -logCode "Success" -FileName "RemoveUserScript"
     try {
