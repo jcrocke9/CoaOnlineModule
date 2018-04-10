@@ -23,7 +23,7 @@ function Set-CoaVariables {
         [string]$FileName = "MailboxConfiguration",
         [string]$RoleAssignmentPolicy = "COA Default Role Assignment Policy",
         [string]$ClientAccessPolicyName = "COAOWAMailboxPolicy",
-        [int]$LitigationHoldDuration = 1,
+        [int]$LitigationHoldDuration = 730,
         [string]$ExchangeOnlineAdminAccount = "COA Administrator",
         [string]$RetentionPolicyE3 = "COA Policy",
         [string]$RetentionPolicyK1 = "COA F1 Policy",
