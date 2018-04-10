@@ -56,19 +56,19 @@ function Set-CoaVariables {
 #>
 function Get-CoaVariables {
     $Private:CoaVariables = [ordered]@{
-        NumberOfDays = $Script:NumberOfDays;
-        FileName = $Script:FileName;
-        RoleAssignmentPolicy = $Script:RoleAssignmentPolicy;
-        ClientAccessPolicyName = $Script:ClientAccessPolicyName;
-        LitigationHoldDuration = $Script:LitigationHoldDuration;
+        NumberOfDays               = $Script:NumberOfDays;
+        FileName                   = $Script:FileName;
+        RoleAssignmentPolicy       = $Script:RoleAssignmentPolicy;
+        ClientAccessPolicyName     = $Script:ClientAccessPolicyName;
+        LitigationHoldDuration     = $Script:LitigationHoldDuration;
         ExchangeOnlineAdminAccount = $Script:ExchangeOnlineAdminAccount;
-        RetentionPolicyE3 = $Script:RetentionPolicyE3;
-        RetentionPolicyK1 = $Script:RetentionPolicyK1;
-        CoaSkuInformationWorkers = $Script:CoaSkuInformationWorkers;
-        CoaSkuFirstlineWorkers = $Script:CoaSkuFirstlineWorkers;
-        standardLicenseName = $Script:StandardLicenseName;
-        basicLicenseName = $Script:BasicLicenseName;
-        Domain = $Script:Domain;
+        RetentionPolicyE3          = $Script:RetentionPolicyE3;
+        RetentionPolicyK1          = $Script:RetentionPolicyK1;
+        CoaSkuInformationWorkers   = $Script:CoaSkuInformationWorkers;
+        CoaSkuFirstlineWorkers     = $Script:CoaSkuFirstlineWorkers;
+        standardLicenseName        = $Script:StandardLicenseName;
+        basicLicenseName           = $Script:BasicLicenseName;
+        Domain                     = $Script:Domain;
     }
     Write-Output $Private:CoaVariables
 }
@@ -283,17 +283,6 @@ function OpenLog {
     WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
     Return;
 }
-function SendAnEmail {
-    param ([string]$subject, [string]$body)
-    $emailAddress = "$([Environment]::UserName)@$Script:Domain"
-    $emailFromAddress = "COA New User Module `<noreply@$Script:Domain`>"
-    Send-MailMessage -To $emailAddress -From $emailFromAddress -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -Port 25
-    $writeTo = "Send-MailMessage`t$subject`t$body"
-    $logCode = "Email"
-    $logLineTime = (Get-Date).ToString()
-    WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-    Return;
-}
 
 function QueryAdToValidateUsers {
     param ([string]$samAccountName)
@@ -318,7 +307,7 @@ function QueryAdToValidateUsers {
             $logCode = "Error"
             $logLineTime = (Get-Date).ToString()
             WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-            SendAnEmail -subject "New-MSOLUser Error" -body "Get-ADUser: samAccountName cannot be found for $samAccountName"
+            Show-CoaCustomError -subject "New-MSOLUser Error" -body "Get-ADUser: samAccountName cannot be found for $samAccountName"
         }
         $writeTo = "$samAccountName`t$userAccountControl`t$mail`t$department";
         $logCode = "Start"
@@ -331,14 +320,14 @@ function QueryAdToValidateUsers {
             $logCode = "Error"
             $logLineTime = (Get-Date).ToString()
             WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-            SendAnEmail -subject "New-MSOLUser Error" -body "The user name $samAccountName is more than 20 characters; no account was created."
+            Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user name $samAccountName is more than 20 characters; no account was created."
         }
         $problemUsers.Add($samAccountName);
         $writeTo = "Get-ADUser: samAccountName cannot be found for $samAccountName"
         $logCode = "Error"
         $logLineTime = (Get-Date).ToString()
         WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-        SendAnEmail -subject "New-MSOLUser Error" -body "Get-ADUser: samAccountName cannot be found for $samAccountName"
+        Show-CoaCustomError -subject "New-MSOLUser Error" -body "Get-ADUser: samAccountName cannot be found for $samAccountName"
     }
     $ErrorActionPreference = "continue"
     Return;
@@ -583,22 +572,9 @@ function OpenLog {
     }
 } #>
 
-function SendAnEmail {
-    param ([string]$subject, [string]$body, [string]$to, [string]$sys_created_on, [string]$sys_created_by) # "Joe Crockett <joseph.crockett@$Script:Domain>"
-    try {
-        Send-MailMessage -To $to -From "New Office 365 Account <noreply@$Script:Domain>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -ErrorAction Stop
-        $writeTo = "Send-MailMessage`t$subject`t$body`t$sys_created_on`t$sys_created_by"
-        $logCode = "Email"
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-    }
-    catch {
-        Send-MailMessage -To "Joe Crockett <joe.crockett@$Script:Domain>" -From "ERROR: New Office 365 Account <noreply@$Script:Domain>" -Subject $subject -Body $body -SmtpServer "smtp.alexgov.net" -ErrorAction Stop
-        $writeTo = "Send-MailMessage`t$subject`t$body`t$sys_created_on"
-        $logCode = "Email"
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-    }
+function Show-CoaCustomError {
+    param ([string]$subject, [string]$body)
+    Write-Error "`n$subject`n$body"
     Return;
 }
 
@@ -637,7 +613,7 @@ function Set-ValidateUsersUpn {
         $logCode = "Else"
         $logLineTime = (Get-Date).ToString()
         WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-        SendAnEmail -to "Joe Crockett <joe.crockett@$Script:Domain>" -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
+        Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
         # Need to skip to the next iteration
     }
 
@@ -671,7 +647,7 @@ function Set-ValidateUsersUpn {
         $logCode = "Error"
         $logLineTime = (Get-Date).ToString()
         WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-        SendAnEmail -to "Joe Crockett <joe.crockett@$Script:Domain>" -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
+        Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
         Return;
     }
 }
@@ -707,15 +683,7 @@ function SetLicense {
         try {
             Set-MsolUserLicense -UserPrincipalName $upn -AddLicenses $Licenses -LicenseOptions $O365License -ErrorAction Stop
             $LicenseLineItem = (Get-MSOLUser -UserPrincipalName $upn).Licenses.AccountSkuId
-            try {
-                SendAnEmail -to $sys_created_by -subject "Account created for $upn" -body "An Office 365 account has been created for $upn. The account has been assigned a $licenseDisplayName license. This was requested by $sys_created_by on $sys_created_on. Please reach out to IT Services if you find an issue." -sys_created_on $sys_created_on -sys_created_by $sys_created_by -ErrorAction Stop
-            }
-            catch {
-                $writeTo = "SendAnEmail: $LicenseLineItem to $upn"
-                $logCode = "Error"
-                $logLineTime = (Get-Date).ToString()
-                WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-            }
+            Show-CoaCustomError -subject "Account created for $upn" -body "An Office 365 account has been created for $upn. The account has been assigned a $licenseDisplayName license. This was requested by $sys_created_by on $sys_created_on. Please reach out to IT Services if you find an issue."
             $writeTo = "Set-MsolUserLicense: Successfully added $LicenseLineItem to $upn"
             $logCode = "Success"
             $logLineTime = (Get-Date).ToString()
@@ -833,10 +801,38 @@ function Remove-CoaUser {
     param(
         [parameter(Mandatory = $true,
             Position = 0)]
-            [string]$SamAccountName
+        [string]$SamAccountName
     )
     $upn = Get-MsolUser -SearchString $SamAccountName | Select-Object -ExpandProperty UserPrincipalName
     Add-CoaWriteToLog -writeTo "Get-MsolUser`t$upn" -logCode "Success" -FileName "RemoveUserScript"    
+    
+    #region
+    [string]$upn = ""
+    $arrayFromGet = @()
+    $arrayFromGet += Get-MsolUser -SearchString $SamAccountName | Select-Object UserPrincipalName -ExpandProperty UserPrincipalName
+    if ($arrayFromGet.Count -eq 1) {
+        $upn = $arrayFromGet[0]
+        $writeTo = "Get-MsolUser`t$SamAccountName`tSearchString returned: $upn"
+        $logCode = "Get"
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    }
+    else {
+        if ($arrayFromGet.Count -gt 1) {
+            $errMsg = "Either the samAccountName was empty, or the search returned more than one value."
+        }
+        else {
+            $errMsg = "The user $SamAccountName cannot be found in MSOL, and has been removed from processing."
+        }
+        $writeTo = $errMsg
+        $logCode = "Else"
+        $logLineTime = (Get-Date).ToString()
+        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
+        # Need to skip to the next iteration
+        break
+    }
+    #endregion
     $LicenseLineItem = (Get-MSOLUser -UserPrincipalName $upn).Licenses.AccountSkuId
     Add-CoaWriteToLog -writeTo "Get-MsolUser`t$upn`t$LicenseLineItem" -logCode "Success" -FileName "RemoveUserScript"
     try {
@@ -846,7 +842,6 @@ function Remove-CoaUser {
     catch {
         Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$licenses`t$err" -logCode "Error" -FileName "RemoveUserScript"
     }
-    
 }
 function Clear-CoaUser {
     $global:CoaUsersToWorkThrough.Clear()
