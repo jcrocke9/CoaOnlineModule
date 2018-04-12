@@ -30,6 +30,7 @@ function Set-CoaVariables {
         [string]$CoaSkuInformationWorkers = "ALEXANDRIAVA1:ENTERPRISEPACK_GOV",
         [string]$CoaSkuFirstlineWorkers = "ALEXANDRIAVA1:DESKLESSPACK_GOV",
         [string]$CoaSkuExoArchive = "ALEXANDRIAVA1:EXCHANGEARCHIVE_ADDON",
+        [string]$CoaSkuExoAtp = "ALEXANDRIAVA1:ATP_ENTERPRISE_GOV",
         [string]$standardLicenseName = "emailStandard_createAlexID",
         [string]$basicLicenseName = "emailBasic_createAlexID",
         [string]$Domain = "alexandriava.gov"
@@ -45,6 +46,7 @@ function Set-CoaVariables {
     $Script:CoaSkuInformationWorkers = $CoaSkuInformationWorkers
     $Script:CoaSkuFirstlineWorkers = $CoaSkuFirstlineWorkers
     $Script:CoaSkuExoArchive = $CoaSkuExoArchive
+    $Script:CoaSkuExoAtp = $CoaSkuExoAtp
     $Script:StandardLicenseName = $standardLicenseName
     $Script:BasicLicenseName = $basicLicenseName
     $Script:Domain = $Domain
@@ -68,7 +70,8 @@ function Get-CoaVariables {
         RetentionPolicyK1          = $Script:RetentionPolicyK1;
         CoaSkuInformationWorkers   = $Script:CoaSkuInformationWorkers;
         CoaSkuFirstlineWorkers     = $Script:CoaSkuFirstlineWorkers;
-        CoaSkuExoArchive = $Script:CoaSkuExoArchive
+        CoaSkuExoArchive           = $Script:CoaSkuExoArchive;
+        CoaSkuExoAtp               = $Script:CoaSkuExoAtp;
         standardLicenseName        = $Script:StandardLicenseName;
         basicLicenseName           = $Script:BasicLicenseName;
         Domain                     = $Script:Domain;
