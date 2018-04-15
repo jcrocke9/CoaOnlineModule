@@ -20,7 +20,6 @@ function Set-CoaVariables {
         [Parameter()]
         [int]
         $NumberOfDays = -120,
-        [string]$FileName = "MailboxConfiguration",
         [string]$RoleAssignmentPolicy = "COA Default Role Assignment Policy",
         [string]$ClientAccessPolicyName = "COAOWAMailboxPolicy",
         [int]$LitigationHoldDuration = 730,
@@ -36,7 +35,6 @@ function Set-CoaVariables {
         [string]$Domain = "alexandriava.gov"
     )
     $Script:NumberOfDays = $NumberOfDays;
-    $Script:FileName = $FileName
     $Script:RoleAssignmentPolicy = $RoleAssignmentPolicy
     $Script:ClientAccessPolicyName = $ClientAccessPolicyName
     $Script:LitigationHoldDuration = $LitigationHoldDuration
@@ -61,7 +59,6 @@ function Set-CoaVariables {
 function Get-CoaVariables {
     $Private:CoaVariables = [ordered]@{
         NumberOfDays               = $Script:NumberOfDays;
-        FileName                   = $Script:FileName;
         RoleAssignmentPolicy       = $Script:RoleAssignmentPolicy;
         ClientAccessPolicyName     = $Script:ClientAccessPolicyName;
         LitigationHoldDuration     = $Script:LitigationHoldDuration;
@@ -102,7 +99,7 @@ function Set-CoaMailboxConfiguration {
         [Parameter()]
         [int]
         $NumberOfDays = $Script:NumberOfDays,
-        [string]$FileName = $Script:FileName,
+        [string]$FileName = "MailboxConfiguration",
         [string]$RoleAssignmentPolicy = $Script:RoleAssignmentPolicy,
         [string]$ClientAccessPolicyName = $Script:ClientAccessPolicyName,
         [int]$LitigationHoldDuration = $Script:LitigationHoldDUration,
@@ -270,23 +267,13 @@ function Set-CoaMailboxConfiguration {
     $ErrorActionPreference = "Continue"
 }
 #region: Sets Active Directory attributes for Exchange Online
-function WriteToLog {
-    param([string]$logLineTime, [string]$writeTo, [string]$logCode)
-    $logFileDate = Get-Date -UFormat "%Y%m%d"
-    $logLineInfo = "`t$([Environment]::UserName)`t$([Environment]::MachineName)`t"
-    $logLine = $logLineTime
-    $logLine += $logLineInfo
-    $logLine += $logCode; $logLine += "`t"
-    $logLine += $writeTo
-    $logLine | Out-File -FilePath "C:\Logs\NewUserScript_$logFileDate.log" -Append -NoClobber
-    Return;
-}
+
 
 function OpenLog {
-    $logLineTime = (Get-Date).ToString()
     $logCode = "Start"
     $writeTo = "Starting New User script"
-    WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+    $CurrentFileName = "NewUser"
+    Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
     Return;
 }
 
@@ -311,28 +298,28 @@ function QueryAdToValidateUsers {
             $problemUsers += $samAccountName
             $writeTo = "Get-ADUser: $samAccountName`t$userAccountControl"
             $logCode = "Error"
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
             Show-CoaCustomError -subject "New-MSOLUser Error" -body "Get-ADUser: samAccountName cannot be found for $samAccountName"
         }
         $writeTo = "$samAccountName`t$userAccountControl`t$mail`t$department";
         $logCode = "Start"
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "NewUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
     }
     catch {
         if ($user.Length -gt 20) {
             $writeTo = "The user name $samAccountName is more than 20 characters"
             $logCode = "Error"
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
             Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user name $samAccountName is more than 20 characters; no account was created."
         }
         $problemUsers.Add($samAccountName);
         $writeTo = "Get-ADUser: samAccountName cannot be found for $samAccountName"
         $logCode = "Error"
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "NewUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
         Show-CoaCustomError -subject "New-MSOLUser Error" -body "Get-ADUser: samAccountName cannot be found for $samAccountName"
     }
     $ErrorActionPreference = "continue"
@@ -353,8 +340,8 @@ function SetMailAndSmtpAttributes {
             $logCode = "Error"
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
         }    
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "NewUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
     }
     Start-Sleep -Seconds 5
     $mail = Get-ADUser $user -Properties mail | Select-Object mail -ExpandProperty mail
@@ -371,8 +358,8 @@ function SetMailAndSmtpAttributes {
             $logCode = "Error"
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
         }    
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "NewUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
     }
 
     Return;
@@ -386,15 +373,15 @@ function SetLicenseAttributeE3 {
             Set-ADUser -Identity $user -Add @{extensionAttribute13 = "E3"}
             $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = E3"
             $logCode = "Success"
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
         
         }
         catch {
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
             $logCode = "Error"
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode 
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode 
         }
     }
     else {
@@ -402,15 +389,15 @@ function SetLicenseAttributeE3 {
             Set-ADUser -Identity $user -Replace @{extensionAttribute13 = "E3"}
             $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = E3"
             $logCode = "Success"
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
         
         }
         catch {
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
             $logCode = "Error"
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode 
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode 
         }
     }
 }
@@ -423,15 +410,15 @@ function SetLicenseAttributeK1 {
             Set-ADUser -Identity $user -Add @{extensionAttribute13 = "K1"}
             $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = K1"
             $logCode = "Success"
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
         
         }
         catch {
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
             $logCode = "Error"
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode 
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode 
         }
     }
     else {
@@ -439,15 +426,15 @@ function SetLicenseAttributeK1 {
             Set-ADUser -Identity $user -Replace @{extensionAttribute13 = "K1"}
             $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = K1"
             $logCode = "Success"
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
         
         }
         catch {
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
             $logCode = "Error"
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode 
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode 
         }
     }
 }
@@ -534,50 +521,6 @@ function Set-CoaExchangeAttributes {
 }
 #endregion
 #region: Sets ExO Attributes
-
-<# class EmailUser {
-    [string]$samAccountName
-    [string]$license
-    [string]$emailRequired
-    [string]$sys_created_by
-    [string]$sys_created_on
-} #>
-
-<# function WriteToLog {
-    param([string]$logLineTime, [string]$writeTo, [string]$logCode)
-    $logFileDate = Get-Date -UFormat "%Y%m%d"
-    $logLineInfo = "`t$([Environment]::UserName)`t$([Environment]::MachineName)`t"
-    $logLine = $logLineTime
-    $logLine += $logLineInfo
-    $logLine += $logCode; $logLine += "`t"
-    $logLine += $writeTo
-    $logLine | Out-File -FilePath "C:\Logs\NewUserScript_$logFileDate.log" -Append -NoClobber
-    Return;
-} #>
-
-function OpenLog {
-    $logLineTime = (Get-Date).ToString()
-    $logCode = "Start"
-    $writeTo = "Starting New User script"
-    WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
-    Return;
-}
-
-<# function SortTheUserLicenses {
-    Import-Csv $pathToExcel | ForEach-Object {
-        $impUser = New-Object EmailUser;
-        $impUser.samAccountName = $_.firstName + "." + $_.lastName;
-        $impUser.license = $_.emailType;
-        $impUser.emailRequired = $_.emailRequired;
-        $impUser.sys_created_by = $_.sys_created_by;
-        $impUser.sys_created_on = $_.sys_created_on;
-        if ($impUser.emailRequired -eq "Yes") {
-            $usersFromExcel.Add($impUser.samAccountName.ToString());
-        }
-        
-    }
-} #>
-
 function Show-CoaCustomError {
     param ([string]$subject, [string]$body)
     Write-Error "`n$subject`n$body"
@@ -605,8 +548,8 @@ function Set-ValidateUsersUpn {
         $upn = $arrayFromGet[0]
         $writeTo = "Get-MsolUser`t$user`tSearchString returned: $upn"
         $logCode = "Get"
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "NewUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
     }
     else {
         if ($arrayFromGet.Count -gt 1) {
@@ -617,8 +560,8 @@ function Set-ValidateUsersUpn {
         }
         $writeTo = $errMsg
         $logCode = "Else"
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "NewUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
         Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
         # Need to skip to the next iteration
     }
@@ -633,8 +576,8 @@ function Set-ValidateUsersUpn {
             $logCode = "Error"
             "Set-MsolUserPrincipalName: $upn Error: $_" | Tee-Object -Variable writeTo
         }    
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode        
+        $CurrentFileName = "NewUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode        
 
         $upn = Get-MsolUser -UserPrincipalName "$user@$Script:Domain" | Select-Object UserPrincipalName -ExpandProperty UserPrincipalName
         $script:upnArray.Add($SingleUser)
@@ -644,15 +587,15 @@ function Set-ValidateUsersUpn {
         $script:upnArray.Add($SingleUser)
         $writeTo = "Get-MsolUserPrincipalName: UPN need not be set"
         $logCode = "Get"
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "NewUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
         Return;
     }
     else {
         $writeTo = "The user $user cannot be found in MSOL, and has been removed from processing."
         $logCode = "Error"
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "NewUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
         Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
         Return;
     }
@@ -672,8 +615,8 @@ function SetLicense {
             $logCode = "Error"
             "Set-MsolUser: $upn Error: $_" | Tee-Object -Variable writeTo
         }    
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "NewUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
     }
 
     $LicenseLineItem = @()
@@ -682,8 +625,8 @@ function SetLicense {
     if ($LicenseLineItem -contains $Script:CoaSkuInformationWorkers -or $LicenseLineItem -contains $Script:CoaSkuFirstlineWorkers) {
         $writeTo = "Get-MsolUserLicense: $upn already contains: $LicenseLineItem"
         $logCode = "Get" 
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "NewUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
     }
     else {
         try {
@@ -692,14 +635,14 @@ function SetLicense {
             Show-CoaCustomError -subject "Account created for $upn" -body "An Office 365 account has been created for $upn. The account has been assigned a $licenseDisplayName license. This was requested by $sys_created_by on $sys_created_on. Please reach out to IT Services if you find an issue."
             $writeTo = "Set-MsolUserLicense: Successfully added $LicenseLineItem to $upn"
             $logCode = "Success"
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
         }
         catch {
             $logCode = "Error"
             "Set-MsolUserLicense: $upn Error: $_" | Tee-Object -Variable writeTo
-            $logLineTime = (Get-Date).ToString()
-            WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
 
         }
         if ($LicenseLineItem -contains $Script:CoaSkuFirstlineWorkers ) {
@@ -707,14 +650,14 @@ function SetLicense {
                 Set-MsolUserLicense -UserPrincipalName $upn -AddLicenses $Script:CoaSkuExoArchive
                 $writeTo = "Set-MsolUserLicense: identity $upn Archive"
                 $logCode = "Success"
-                $logLineTime = (Get-Date).ToString()
-                WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+                $CurrentFileName = "NewUser"
+                Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
             }
             catch {
                 $logCode = "Error"
                 "Set-Mailbox: FAILED adding Archive license TO $UPN" | Tee-Object -Variable writeTo
-                $logLineTime = (Get-Date).ToString()
-                WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+                $CurrentFileName = "NewUser"
+                Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
             }    
         }
     }
@@ -817,8 +760,8 @@ function Remove-CoaUser {
         $upn = $arrayFromGet[0]
         $writeTo = "Get-MsolUser`t$SamAccountName`tSearchString returned: $upn"
         $logCode = "Get"
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "RemoveUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
     }
     else {
         if ($arrayFromGet.Count -gt 1) {
@@ -829,8 +772,8 @@ function Remove-CoaUser {
         }
         $writeTo = $errMsg
         $logCode = "Else"
-        $logLineTime = (Get-Date).ToString()
-        WriteToLog -logLineTime $logLineTime -writeTo $writeTo -logCode $logCode
+        $CurrentFileName = "RemoveUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
         Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
         # Need to skip to the next iteration
         break
