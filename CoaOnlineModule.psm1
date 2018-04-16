@@ -442,7 +442,7 @@ class UserObject {
     [string]$samAccountName
     [string]$License
 }
-$global:CoaUsersToWorkThrough = [System.Collections.Generic.List[UserObject]]::new();
+$global:CoaUsersToWorkThrough = New-Object [System.Collections.Generic.List[UserObject]]
 <#
     .Synopsis
     Sets new mailbox accounts up with the standard policies of COA
@@ -478,10 +478,7 @@ function Set-CoaExchangeAttributes {
         [UserObject]
         $SingleUser
     )
-    $problemUsers = [System.Collections.Generic.List[System.Object]]::new();    
-    # $standardUsers = [System.Collections.Generic.List[System.Object]]::new();
-    # $basicUsers = [System.Collections.Generic.List[System.Object]]::new();
-
+    $problemUsers = [System.Collections.Generic.List[System.Object]]::new();
     OpenLog
     if ($SingleUser) {
         QueryAdToValidateUsers -samAccountName $SingleUser.samAccountName
@@ -763,7 +760,7 @@ function New-CoaUser {
         [switch]$Firstline
     )
     $user = $null
-    $user = [UserObject]::new()
+    $user = New-Object [UserObject]
     if ($Firstline) {
         $user.License = $Script:BasicLicenseName
     }

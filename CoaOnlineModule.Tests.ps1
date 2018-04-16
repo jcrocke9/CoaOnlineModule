@@ -1,10 +1,30 @@
-Import-Module C:\alex\CoaModule\CoaOnlineModule.psm1
+Import-Module C:\alex\CoaOnlineModule\CoaOnlineModule.psm1
 
-<# Describe "New-CoaUser" {
-    It "creates an object to seed a user account" {
-        $user = New-CoaUser joe.crockett
-        $user | Should -BeOfType [Object[]]
+class UserObject {
+    [string]$samAccountName
+    [string]$License
+}
+
+Describe "New-CoaUser" {
+    
+    Context 'Test of object type' {
+        It "Does not throw" {
+            [UserObject]::new()
+        }
     }
-} #>
-$user = New-CoaUser joe.crockett
-$user
+    Context 'creates an object to seed a user account' {
+        Mock New-Object {UserObject} -Verifiable
+        It 'Returns a user' {
+            New-CoaUser joe.c
+            Assert-MockCalled New-Object 1 {
+                
+                $TypeName -eq 'UserObject'
+            }
+        }
+    }
+    <# Context 'Test of pipeline' {
+        It "Should Not BeNullOrEmpty" {
+            New-CoaUser test.user | Set-CoaExchangeAttributes | Should -Not -BeNullOrEmpty
+        }
+    } #>
+}
