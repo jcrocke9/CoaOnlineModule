@@ -752,7 +752,57 @@ function Remove-CoaUser {
             Position = 0)]
         [string]$SamAccountName
     )    
-    #region
+    #region: AD
+    try {
+        Set-ADUser $SamAccountName -Replace @{authOrig = "CN=O365 Administrator,OU=Admin,OU=Generics,OU=O365,DC=alexgov,DC=net"} -ErrorAction Stop -ErrorVariable err1
+        $writeTo = "Set-ADUser`t$SamAccountName`tReplace authOrig"
+        $logCode = "Success"
+        $CurrentFileName = "RemoveUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+    }
+    catch {
+        $writeTo = "Set-ADUser`t$SamAccountName`tCould not replace authOrig`t$err1"
+        $logCode = "Error"
+        $CurrentFileName = "RemoveUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+    }
+    try {
+        Set-ADUser $SamAccountName -Replace @{msExchHideFromAddressLists = "TRUE"} -ErrorAction Stop -ErrorVariable err2
+        $writeTo = "Set-ADUser`t$SamAccountName`tReplace msExchHideFromAddressLists"
+        $logCode = "Success"
+        $CurrentFileName = "RemoveUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+    }
+    catch {
+        $writeTo = "Set-ADUser`t$SamAccountName`tCould not replace msExchHideFromAddressLists`t$err2"
+        $logCode = "Error"
+        $CurrentFileName = "RemoveUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+    }
+    Get-ADPrincipalGroupMembership -Identity $SamAccountName | Select-Object samAccountName -ExpandProperty samAccountName | ForEach-Object {
+        $groupName = $_
+        if ($groupName -ne "Domain Users") {        
+            try {
+                Remove-ADPrincipalGroupMembership -Identity $SamAccountName -MemberOf $groupName -Confirm:$false -ErrorAction Stop
+                #region logging
+                $writeTo = "Remove-ADPrincipalGroupMembership:`t$SamAccountName`t$groupName"
+                $logCode = "Success"
+                $CurrentFileName = "RemoveUser"
+                Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+                #endregion
+            }
+            catch {
+                #region logging
+                $writeTo = "Remove-ADPrincipalGroupMembership:`t$SamAccountName`t$groupName"
+                $logCode = "Error"
+                $CurrentFileName = "RemoveUser"
+                Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+                #endregion
+            }
+        }
+    }
+    #endregion
+    #region: MSOL
     [string]$upn = ""
     $arrayFromGet = @()
     $arrayFromGet += Get-MsolUser -SearchString $SamAccountName | Select-Object UserPrincipalName -ExpandProperty UserPrincipalName
@@ -774,7 +824,7 @@ function Remove-CoaUser {
         $logCode = "Else"
         $CurrentFileName = "RemoveUser"
         Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
-        Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
+        Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user $SamAccountName cannot be found in MSOL, and has been removed from processing."
         # Need to skip to the next iteration
         break
     }
