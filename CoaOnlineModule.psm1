@@ -662,7 +662,20 @@ function SetLicense {
         }
     }
 }
-
+<#
+    .SYNOPSIS
+    Sets the Exchange Online Attributes after a sync
+    .DESCRIPTION
+    Once a new user object has been created, and a sync has been performed, this cmdlet will add the attributes needed in Exchange Online
+    .PARAMETER UserList
+    Uses the NewCoaUser objects that were created prior to running the cmdlet;
+    .PARAMETER SingleUser
+    Uses the NewCoaUser objects that were created with the pipeline cmdlet;
+    .EXAMPLE
+    Set-CoaExoAttributes -UserList $CoaUsersToWorkThrough
+    .EXAMPLE
+    New-CoaUser test.user | Set-CoaExchangeAttributes | Set-CoaExoAttributes
+#>
 function Set-CoaExoAttributes {
     Param (
         [parameter(
@@ -742,6 +755,7 @@ function Set-CoaExoAttributes {
     New-CoaUser joe.crockett -Firstline
 #>
 function New-CoaUser {
+    
     Param (
         [parameter(Mandatory = $true,
             Position = 0)] 
@@ -762,17 +776,13 @@ function New-CoaUser {
 }
 <#
     .SYNOPSIS
-    Removes the user's license and updates the attributes on .
+    Removes the user's license & user groups, and updates the attributes on the AD object.
     .DESCRIPTION
-    A new user consists of the SamAccountName and which license you will assign. This cmdlet preps those two things, and can hand them off to Set-CoaExchangeAttributes, Set-CoaExoAttributes to complete the attributes needed for new user creation
+    Removes the user's license and updates the following attributes: authOrig, msExchHideFromAddressLists; also removes the groups the user is a member of.
     .PARAMETER SamAccountName
     Specifies the samAccountName for the user
-    .PARAMETER Firstline
-    Switch used to make the user a Firstline worker; default is Enterprise worker
     .EXAMPLE
-    New-CoaUser joe.crockett
-    .EXAMPLE
-    New-CoaUser joe.crockett -Firstline
+    Remove-CoaUser test.user
 #>
 function Remove-CoaUser {
     param(
@@ -868,6 +878,14 @@ function Remove-CoaUser {
         Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$licenses`t$err" -logCode "Error" -FileName "RemoveUserScript"
     }
 }
+<#
+    .SYNOPSIS
+    Clears that variable CoaUsersToWorkThrough
+    .DESCRIPTION
+    When you use the New-CoaUser, it stores the users in a global variable called CoaUsersToWorkThrough.
+    .EXAMPLE
+    Clear-CoaUser
+#>
 function Clear-CoaUser {
     $global:CoaUsersToWorkThrough.Clear()
 }
