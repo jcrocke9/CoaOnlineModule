@@ -727,6 +727,20 @@ function Set-CoaExoAttributes {
 }
 #endregion
 #region: New-CoaUser
+<#
+    .SYNOPSIS
+    Creates the new user object that can be used by other cmdlets to complete the attributes needed for new user creation.
+    .DESCRIPTION
+    A new user consists of the SamAccountName and which license you will assign. This cmdlet preps those two things, and can hand them off to Set-CoaExchangeAttributes, Set-CoaExoAttributes to complete the attributes needed for new user creation
+    .PARAMETER SamAccountName
+    Specifies the samAccountName for the user
+    .PARAMETER Firstline
+    Switch used to make the user a Firstline worker; default is Enterprise worker
+    .EXAMPLE
+    New-CoaUser joe.crockett
+    .EXAMPLE
+    New-CoaUser joe.crockett -Firstline
+#>
 function New-CoaUser {
     Param (
         [parameter(Mandatory = $true,
@@ -746,6 +760,20 @@ function New-CoaUser {
     $global:CoaUsersToWorkThrough.Add($user)
     Write-Output $global:CoaUsersToWorkThrough
 }
+<#
+    .SYNOPSIS
+    Removes the user's license and updates the attributes on .
+    .DESCRIPTION
+    A new user consists of the SamAccountName and which license you will assign. This cmdlet preps those two things, and can hand them off to Set-CoaExchangeAttributes, Set-CoaExoAttributes to complete the attributes needed for new user creation
+    .PARAMETER SamAccountName
+    Specifies the samAccountName for the user
+    .PARAMETER Firstline
+    Switch used to make the user a Firstline worker; default is Enterprise worker
+    .EXAMPLE
+    New-CoaUser joe.crockett
+    .EXAMPLE
+    New-CoaUser joe.crockett -Firstline
+#>
 function Remove-CoaUser {
     param(
         [parameter(Mandatory = $true,
