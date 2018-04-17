@@ -838,10 +838,13 @@ function Clear-CoaUser {
 #>
 function Remove-CoaUser {
     param(
+        
         [parameter(Mandatory = $true,
             Position = 0)]
         [string]$SamAccountName
+        #Add a second parameter for taking comma separated samAccountNames
     )    
+    #Add in if statement for looking for parameters
     #region: AD
     try {
         Set-ADUser $SamAccountName -Replace @{authOrig = $Script:authOrig} -ErrorAction Stop -ErrorVariable err1
