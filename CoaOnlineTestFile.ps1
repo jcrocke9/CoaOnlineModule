@@ -1,3 +1,7 @@
-Import-Module C:\Alex\CoaOnlineModule\CoaOnlineModule.psm1
-# New-CoaUser -SamAccountName test.test05 -Firstline | Set-CoaExchangeAttributes | Set-CoaExoAttributes
-Remove-CoaUser -SamAccountName test.user3
+
+New-CoaUser -SamAccountName test.test05 -Firstline 
+New-CoaUser -SamAccountName test.user3 -Firstline
+Set-CoaExchangeAttributes -UserList $CoaUsersToWorkThrough
+Set-CoaExoAttributes -UserList $CoaUsersToWorkThrough
+
+# Remove-CoaUser -CommaSeparatedSamAccountNames "test.user3","test.test05"
