@@ -789,7 +789,6 @@ $Global:CoaUsersToWorkThrough = [System.Collections.Generic.List[UserObject]]::n
     New-CoaUser joe.crockett -Firstline
 #>
 function New-CoaUser {
-    
     Param (
         [parameter(Mandatory = $true,
             Position = 0)] 
