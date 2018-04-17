@@ -442,7 +442,7 @@ class UserObject {
     [string]$samAccountName
     [string]$License
 }
-$global:CoaUsersToWorkThrough = New-Object [System.Collections.Generic.List[UserObject]]
+$Global:CoaUsersToWorkThrough = [System.Collections.Generic.List[UserObject]]::new();
 <#
     .Synopsis
     Sets new mailbox accounts up with the standard policies of COA
@@ -471,7 +471,7 @@ function Set-CoaExchangeAttributes {
             Position = 0,
             ValueFromPipeline = $false)]
         [System.Collections.Generic.List[UserObject]]
-        $UserList = $global:CoaUsersToWorkThrough,
+        $UserList = $Global:CoaUsersToWorkThrough,
         [parameter(
             Position = 1,
             ValueFromPipeline = $true)]    
@@ -490,7 +490,7 @@ function Set-CoaExchangeAttributes {
         else {
             SetLicenseAttributeE3 -user $SingleUser.samAccountName
         }
-        $global:CoaUsersToWorkThrough.Remove($SingleUser);
+        $Global:CoaUsersToWorkThrough.Remove($SingleUser);
     }
     else {
         foreach ($samAccountName in $UserList ) {
@@ -513,7 +513,7 @@ function Set-CoaExchangeAttributes {
                 SetLicenseAttributeE3 -user $user.samAccountName
             }
         }
-        # $global:CoaUsersToWorkThrough.Clear()
+        # $Global:CoaUsersToWorkThrough.Clear()
     }
 }
 #endregion
@@ -679,7 +679,7 @@ function Set-CoaExoAttributes {
             Position = 0,
             ValueFromPipeline = $false)]
         [System.Collections.Generic.List[UserObject]]
-        $UserList = $global:CoaUsersToWorkThrough,
+        $UserList = $Global:CoaUsersToWorkThrough,
         [parameter(
             Position = 1,
             ValueFromPipeline = $true)]    
@@ -717,7 +717,7 @@ function Set-CoaExoAttributes {
                 $pack = standardLicensePack
                 $license = $Script:CoaSkuInformationWorkers
                 SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
-                $global:CoaUsersToWorkThrough.Remove($upnFO);
+                $Global:CoaUsersToWorkThrough.Remove($upnFO);
                 break :outer
             }
         }
@@ -729,7 +729,7 @@ function Set-CoaExoAttributes {
                 $pack = basicLicensePack
                 $license = $Script:CoaSkuFirstlineWorkers
                 SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
-                $global:CoaUsersToWorkThrough.Remove($upnFO);
+                $Global:CoaUsersToWorkThrough.Remove($upnFO);
                 break :outer
             }
         }
@@ -760,7 +760,7 @@ function New-CoaUser {
         [switch]$Firstline
     )
     $user = $null
-    $user = New-Object [UserObject]
+    $user = [UserObject]::new()
     if ($Firstline) {
         $user.License = $Script:BasicLicenseName
     }
@@ -768,8 +768,8 @@ function New-CoaUser {
         $user.License = $Script:StandardLicenseName
     }
     $user.samAccountName = $samAccountName
-    $global:CoaUsersToWorkThrough.Add($user)
-    Write-Output $global:CoaUsersToWorkThrough
+    $Global:CoaUsersToWorkThrough.Add($user)
+    Write-Output $Global:CoaUsersToWorkThrough
 }
 <#
     .SYNOPSIS
@@ -884,7 +884,7 @@ function Remove-CoaUser {
     Clear-CoaUser
 #>
 function Clear-CoaUser {
-    $global:CoaUsersToWorkThrough.Clear()
+    $Global:CoaUsersToWorkThrough.Clear()
 }
 #endregion
 Set-CoaVariables
