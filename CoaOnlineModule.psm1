@@ -383,7 +383,7 @@ function SetLicenseAttributeE3 {
     $extensionAttribute13 = Get-ADUser -Identity $user -Properties extensionAttribute13 | Select-Object -ExpandProperty extensionAttribute13
     if (!$extensionAttribute13) {
         try {
-            Set-ADUser -Identity $user -Add @{extensionAttribute13 = "E3"}
+            Set-ADUser -Identity $user -Add @{extensionAttribute13 = "E3"} -ErrorAction Stop
             $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = E3"
             $logCode = "Success"
             $CurrentFileName = "NewUser"
@@ -399,7 +399,7 @@ function SetLicenseAttributeE3 {
     }
     else {
         try {
-            Set-ADUser -Identity $user -Replace @{extensionAttribute13 = "E3"}
+            Set-ADUser -Identity $user -Replace @{extensionAttribute13 = "E3"} -ErrorAction Stop
             $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = E3"
             $logCode = "Success"
             $CurrentFileName = "NewUser"
@@ -420,7 +420,7 @@ function SetLicenseAttributeK1 {
     $extensionAttribute13 = Get-ADUser -Identity $user -Properties extensionAttribute13 | Select-Object -ExpandProperty extensionAttribute13
     if (!$extensionAttribute13) {
         try {
-            Set-ADUser -Identity $user -Add @{extensionAttribute13 = "K1"}
+            Set-ADUser -Identity $user -Add @{extensionAttribute13 = "K1"} -ErrorAction Stop
             $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = K1"
             $logCode = "Success"
             $CurrentFileName = "NewUser"
@@ -436,7 +436,7 @@ function SetLicenseAttributeK1 {
     }
     else {
         try {
-            Set-ADUser -Identity $user -Replace @{extensionAttribute13 = "K1"}
+            Set-ADUser -Identity $user -Replace @{extensionAttribute13 = "K1"} -ErrorAction Stop
             $writeTo = "Set-ADUser`t$user`tSet extensionAttribute13 = K1"
             $logCode = "Success"
             $CurrentFileName = "NewUser"
@@ -610,7 +610,7 @@ function SetLicense {
     $Location = (Get-MSOLUser -UserPrincipalName $upn).UsageLocation
     if (!$Location) {
         try {
-            Set-MsolUser -UserPrincipalName $upn -UsageLocation "US"
+            Set-MsolUser -UserPrincipalName $upn -UsageLocation "US" -ErrorAction Stop
             $writeTo = "Set-MsolUser: Successfully set location for $upn"
             $logCode = "Success"
         }
@@ -635,7 +635,7 @@ function SetLicense {
         try {
             Set-MsolUserLicense -UserPrincipalName $upn -AddLicenses $Licenses -LicenseOptions $O365License -ErrorAction Stop
             $LicenseLineItem = (Get-MSOLUser -UserPrincipalName $upn).Licenses.AccountSkuId
-            Show-CoaCustomError -subject "Account created for $upn" -body "An Office 365 account has been created for $upn. The account has been assigned a $licenseDisplayName license. This was requested by $sys_created_by on $sys_created_on. Please reach out to IT Services if you find an issue."
+            Write-Output "An Office 365 account has been created for $upn. The account has been assigned a $licenseDisplayName license."
             $writeTo = "Set-MsolUserLicense: Successfully added $LicenseLineItem to $upn"
             $logCode = "Success"
             $CurrentFileName = "NewUser"
@@ -650,7 +650,7 @@ function SetLicense {
         }
         if ($LicenseLineItem -contains $Script:CoaSkuFirstlineWorkers ) {
             try {
-                Set-MsolUserLicense -UserPrincipalName $upn -AddLicenses $Script:CoaSkuExoArchive
+                Set-MsolUserLicense -UserPrincipalName $upn -AddLicenses $Script:CoaSkuExoArchive -ErrorAction Stop
                 $writeTo = "Set-MsolUserLicense: identity $upn Archive"
                 $logCode = "Success"
                 $CurrentFileName = "NewUser"
