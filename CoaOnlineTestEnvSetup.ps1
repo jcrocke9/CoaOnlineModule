@@ -20,6 +20,6 @@ foreach ($item in $ListOfRoleAssignmentPolicies) {
 $ListOfClientAccessRules = @("COAOWAMailboxPolicy")
 
 foreach ($item in $ListOfClientAccessRules) {
-    New-ClientAccessRule -Name $item
+    New-ClientAccessRule -Name $item -Action AllowAccess
 }
 

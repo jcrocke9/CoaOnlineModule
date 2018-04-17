@@ -7,6 +7,7 @@ using namespace System.Linq;
 using namespace System.Collections.Generic;
 Import-Module ActiveDirectory;
 Import-Module -Name C:\alex\CoaOnlineModule\CoaLoggingModule.psm1 -Function Add-CoaWriteToLog
+#region: Variables
 <#
     .Synopsis
     Use this cmdlet to set new variables over the default ones.
@@ -24,6 +25,7 @@ function Set-CoaVariables {
         [string]$ClientAccessPolicyName = "COAOWAMailboxPolicy",
         [int]$LitigationHoldDuration = 730,
         [string]$ExchangeOnlineAdminAccount = "COA Administrator",
+        [string]$authOrig = "CN=O365 Administrator,OU=Admin,OU=Generics,OU=O365,DC=alexgov,DC=net",
         [string]$RetentionPolicyE3 = "COA Policy",
         [string]$RetentionPolicyK1 = "COA F1 Policy",
         [string]$RetentionPolicyTermOfficial = "Termination Retention Policy",
@@ -41,6 +43,7 @@ function Set-CoaVariables {
     $Script:ClientAccessPolicyName = $ClientAccessPolicyName
     $Script:LitigationHoldDuration = $LitigationHoldDuration
     $Script:ExchangeOnlineAdminAccount = $ExchangeOnlineAdminAccount
+    $Script:authOrig = $authOrig
     $Script:RetentionPolicyE3 = $RetentionPolicyE3
     $Script:RetentionPolicyK1 = $RetentionPolicyK1
     $Script:RetentionPolicyTermOfficial = $RetentionPolicyTermOfficial
@@ -67,6 +70,7 @@ function Get-CoaVariables {
         ClientAccessPolicyName      = $Script:ClientAccessPolicyName;
         LitigationHoldDuration      = $Script:LitigationHoldDuration;
         ExchangeOnlineAdminAccount  = $Script:ExchangeOnlineAdminAccount;
+        authOrig = $Script:authOrig
         RetentionPolicyE3           = $Script:RetentionPolicyE3;
         RetentionPolicyK1           = $Script:RetentionPolicyK1;
         RetentionPolicyTermOfficial = $Script:RetentionPolicyTermOfficial;
@@ -81,6 +85,8 @@ function Get-CoaVariables {
     }
     Write-Output $Private:CoaVariables
 }
+#endregion
+#region: Mailbox Configuration
 <#
     .Synopsis
     Post-creation Exchange Online mailbox configuration for new accounts.
@@ -272,6 +278,7 @@ function Set-CoaMailboxConfiguration {
     Clear-Variable UserList
     $ErrorActionPreference = "Continue"
 }
+#endregion
 #region: Sets Active Directory attributes for Exchange Online
 
 
@@ -444,11 +451,6 @@ function SetLicenseAttributeK1 {
         }
     }
 }
-class UserObject {
-    [string]$samAccountName
-    [string]$License
-}
-$Global:CoaUsersToWorkThrough = [System.Collections.Generic.List[UserObject]]::new();
 <#
     .Synopsis
     Sets new mailbox accounts up with the standard policies of COA
@@ -541,7 +543,6 @@ function standardLicensePack {
     $O365License = New-MsolLicenseOptions -AccountSkuId $Script:CoaSkuInformationWorkers -DisabledPlans $disabledPlans
     Return $O365License;
 }
-
 function Set-ValidateUsersUpn {
     param([UserObject]$SingleUser); 
     $user = $SingleUser.samAccountName;
@@ -603,7 +604,6 @@ function Set-ValidateUsersUpn {
         Return;
     }
 }
-
 function SetLicense {
     param([string]$upn, [string]$Licenses, [System.Object]$O365License, [string]$sys_created_by, [string]$licenseDisplayName);
 
@@ -743,6 +743,11 @@ function Set-CoaExoAttributes {
 }
 #endregion
 #region: New-CoaUser
+class UserObject {
+    [string]$samAccountName
+    [string]$License
+}
+$Global:CoaUsersToWorkThrough = [System.Collections.Generic.List[UserObject]]::new();
 <#
     .SYNOPSIS
     Creates the new user object that can be used by other cmdlets to complete the attributes needed for new user creation.
@@ -779,6 +784,20 @@ function New-CoaUser {
 }
 <#
     .SYNOPSIS
+    Clears that variable CoaUsersToWorkThrough
+    .DESCRIPTION
+    When you use the New-CoaUser, it stores the users in a global variable called CoaUsersToWorkThrough.
+    .EXAMPLE
+    Clear-CoaUser
+#>
+function Clear-CoaUser {
+    $Global:CoaUsersToWorkThrough.Clear()
+}
+
+#endregion
+#region: Remove-CoaUser
+<#
+    .SYNOPSIS
     Removes the user's license & user groups, and updates the attributes on the AD object.
     .DESCRIPTION
     Removes the user's license and updates the following attributes: authOrig, msExchHideFromAddressLists; also removes the groups the user is a member of.
@@ -795,7 +814,7 @@ function Remove-CoaUser {
     )    
     #region: AD
     try {
-        Set-ADUser $SamAccountName -Replace @{authOrig = "CN=O365 Administrator,OU=Admin,OU=Generics,OU=O365,DC=alexgov,DC=net"} -ErrorAction Stop -ErrorVariable err1
+        Set-ADUser $SamAccountName -Replace @{authOrig = $Script:authOrig} -ErrorAction Stop -ErrorVariable err1
         $writeTo = "Set-ADUser`t$SamAccountName`tReplace authOrig"
         $logCode = "Success"
         $CurrentFileName = "RemoveUser"
@@ -892,17 +911,6 @@ function Remove-CoaUser {
         Add-CoaWriteToLog -writeTo "Set-Mailbox`t$SamAccountName`t$Script:RetentionPolicyTermOfficial`t$err3" -logCode "Error" -FileName "RemoveUser"
     }
     #endregion
-}
-<#
-    .SYNOPSIS
-    Clears that variable CoaUsersToWorkThrough
-    .DESCRIPTION
-    When you use the New-CoaUser, it stores the users in a global variable called CoaUsersToWorkThrough.
-    .EXAMPLE
-    Clear-CoaUser
-#>
-function Clear-CoaUser {
-    $Global:CoaUsersToWorkThrough.Clear()
 }
 #endregion
 Set-CoaVariables
