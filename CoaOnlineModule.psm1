@@ -26,6 +26,8 @@ function Set-CoaVariables {
         [string]$ExchangeOnlineAdminAccount = "COA Administrator",
         [string]$RetentionPolicyE3 = "COA Policy",
         [string]$RetentionPolicyK1 = "COA F1 Policy",
+        [string]$RetentionPolicyTermOfficial = "Termination Retention Policy",
+        [string]$RetentionPolicyDeptHead = "COA Department Head Policy",
         [string]$CoaSkuInformationWorkers = "ALEXANDRIAVA1:ENTERPRISEPACK_GOV",
         [string]$CoaSkuFirstlineWorkers = "ALEXANDRIAVA1:DESKLESSPACK_GOV",
         [string]$CoaSkuExoArchive = "ALEXANDRIAVA1:EXCHANGEARCHIVE_ADDON",
@@ -41,6 +43,7 @@ function Set-CoaVariables {
     $Script:ExchangeOnlineAdminAccount = $ExchangeOnlineAdminAccount
     $Script:RetentionPolicyE3 = $RetentionPolicyE3
     $Script:RetentionPolicyK1 = $RetentionPolicyK1
+    $Script:
     $Script:CoaSkuInformationWorkers = $CoaSkuInformationWorkers
     $Script:CoaSkuFirstlineWorkers = $CoaSkuFirstlineWorkers
     $Script:CoaSkuExoArchive = $CoaSkuExoArchive
@@ -707,7 +710,7 @@ function Set-CoaExoAttributes {
         $upn += "@"
         $upn += $Script:Domain
         $local:baseUpn = $upnFO.samAccountName.ToString()
-        Add-CoaWriteToLog -writeTo "$local:baseUpn`t$upn" -logCode "Info" -FileName "NewUserScript"
+        Add-CoaWriteToLog -writeTo "$local:baseUpn`t$upn" -logCode "Info" -FileName "NewUser"
         :outer
         foreach ($user in $script:standardUsers) {
             $samAccountName = $user.samAccountName.ToString()             
@@ -864,16 +867,28 @@ function Remove-CoaUser {
         break
     }
     #endregion
+    #region: MSOL License
     $LicenseLineItem
     $LicenseLineItem = (Get-MSOLUser -UserPrincipalName $upn).Licenses.AccountSkuId
-    Add-CoaWriteToLog -writeTo "Get-MsolUser`t$upn`t$LicenseLineItem" -logCode "Success" -FileName "RemoveUserScript"
+    Add-CoaWriteToLog -writeTo "Get-MsolUser`t$upn`t$LicenseLineItem" -logCode "Success" -FileName "RemoveUser"
     try {
         Set-MsolUserLicense -UserPrincipalName $upn -RemoveLicenses $LicenseLineItem -ErrorAction Stop -ErrorVariable err
-        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$LicenseLineItem" -logCode "Success" -FileName "RemoveUserScript"
+        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$LicenseLineItem" -logCode "Success" -FileName "RemoveUser"
     }
     catch {
-        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$licenses`t$err" -logCode "Error" -FileName "RemoveUserScript"
+        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$licenses`t$err" -logCode "Error" -FileName "RemoveUser"
     }
+    #endregion
+    #region: Set retention policy
+    try { 
+        # Get Mailbox and turn the retention, type, ProhibitSendReceiveQuota, ProhibitSendQuota, IssueWarningQuota
+        Set-Mailbox -identity $SamAccountName -RetentionPolicy $retentionPolicy -ErrorAction Stop -ErrorVariable err3
+        Add-CoaWriteToLog -writeTo "Set-Mailbox`t$SamAccountName`t$retentionPolicy" -logCode "Success" -FileName "RemoveUser"
+    }
+    catch {
+        Add-CoaWriteToLog -writeTo "Set-Mailbox`t$SamAccountName`t$retentionPolicy`t$err3" -logCode "Error" -FileName "RemoveUser"
+    }
+    #endregion
 }
 <#
     .SYNOPSIS
