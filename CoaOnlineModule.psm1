@@ -70,7 +70,7 @@ function Get-CoaVariables {
         ClientAccessPolicyName      = $Script:ClientAccessPolicyName;
         LitigationHoldDuration      = $Script:LitigationHoldDuration;
         ExchangeOnlineAdminAccount  = $Script:ExchangeOnlineAdminAccount;
-        authOrig = $Script:authOrig
+        authOrig                    = $Script:authOrig
         RetentionPolicyE3           = $Script:RetentionPolicyE3;
         RetentionPolicyK1           = $Script:RetentionPolicyK1;
         RetentionPolicyTermOfficial = $Script:RetentionPolicyTermOfficial;
@@ -340,6 +340,7 @@ function QueryAdToValidateUsers {
 }
 #endregion
 #region: Sets the mail and SMTP attributes, if needed
+#region: Private functions for AD
 function SetMailAndSmtpAttributes {
     param([string]$user)
     $mail = Get-ADUser $user -Properties mail | Select-Object mail -ExpandProperty mail
@@ -451,6 +452,7 @@ function SetLicenseAttributeK1 {
         }
     }
 }
+#endregion
 <#
     .Synopsis
     Sets new mailbox accounts up with the standard policies of COA
@@ -498,7 +500,7 @@ function Set-CoaExchangeAttributes {
         else {
             SetLicenseAttributeE3 -user $SingleUser.samAccountName
         }
-        $Global:CoaUsersToWorkThrough.Remove($SingleUser);
+        return $SingleUser
     }
     else {
         foreach ($samAccountName in $UserList ) {
@@ -521,11 +523,11 @@ function Set-CoaExchangeAttributes {
                 SetLicenseAttributeE3 -user $user.samAccountName
             }
         }
-        # $Global:CoaUsersToWorkThrough.Clear()
     }
 }
 #endregion
 #region: Sets ExO Attributes
+#region: Private functions for ExO
 function Show-CoaCustomError {
     param ([string]$subject, [string]$body)
     Write-Error "`n$subject`n$body"
@@ -665,6 +667,7 @@ function SetLicense {
         }
     }
 }
+#endregion
 <#
     .SYNOPSIS
     Sets the Exchange Online Attributes after a sync
@@ -697,49 +700,72 @@ function Set-CoaExoAttributes {
     $script:basicUsers = [System.Collections.Generic.List[System.Object]]::new();
     [System.Object]$O365License;
     OpenLog
-    
-    foreach ($user in $UserList) {
-        Set-ValidateUsersUpn -SingleUser $user
-        if ($user.license -eq $Script:StandardLicenseName) {
-            $script:standardUsers.Add($user);
-        }
-        if ($user.license -eq $Script:BasicLicenseName) {
-            $script:basicUsers.Add($user);
-        }
-    }
-    
-    foreach ($upnFO in $script:upnArray) {
-        $upn = $upnFO.samAccountName.ToString()
+    if ($SingleUser) {
+        Set-ValidateUsersUpn -SingleUser $SingleUser
+        $upn = $SingleUser.samAccountName.ToString()
         $upn += "@"
         $upn += $Script:Domain
-        $local:baseUpn = $upnFO.samAccountName.ToString()
+        $local:baseUpn = $SingleUser.samAccountName.ToString()
         Add-CoaWriteToLog -writeTo "$local:baseUpn`t$upn" -logCode "Info" -FileName "NewUser"
-        :outer
-        foreach ($user in $script:standardUsers) {
-            $samAccountName = $user.samAccountName.ToString()             
-            $sys_created_by = $env:USERNAME.ToString()
-            if ($samAccountName -eq $local:baseUpn) {
-                $licenseDisplayName = "Standard"
-                $pack = standardLicensePack
-                $license = $Script:CoaSkuInformationWorkers
-                SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
-                $Global:CoaUsersToWorkThrough.Remove($upnFO);
-                break :outer
+        if ($SingleUser.License -eq $Script:BasicLicenseName) {
+            $licenseDisplayName = "Basic"
+            $pack = basicLicensePack
+            $license = $Script:CoaSkuFirstlineWorkers
+            SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
+            $Global:CoaUsersToWorkThrough.Remove($SingleUser);
+        }
+        else {
+            $licenseDisplayName = "Standard"
+            $pack = standardLicensePack
+            $license = $Script:CoaSkuInformationWorkers
+            SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
+            $Global:CoaUsersToWorkThrough.Remove($SingleUser);
+        }
+    }
+    else {
+        foreach ($user in $UserList) {
+            Set-ValidateUsersUpn -SingleUser $user
+            if ($user.license -eq $Script:StandardLicenseName) {
+                $script:standardUsers.Add($user);
+            }
+            if ($user.license -eq $Script:BasicLicenseName) {
+                $script:basicUsers.Add($user);
             }
         }
-        foreach ($user in $script:basicUsers) {
-            $samAccountName = $user.samAccountName.ToString() 
-            $sys_created_by = $env:USERNAME.ToString();
-            if ($samAccountName -eq $local:baseUpn) {
-                $licenseDisplayName = "Basic"
-                $pack = basicLicensePack
-                $license = $Script:CoaSkuFirstlineWorkers
-                SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
-                $Global:CoaUsersToWorkThrough.Remove($upnFO);
-                break :outer
+        foreach ($upnFO in $script:upnArray) {
+            $upn = $upnFO.samAccountName.ToString()
+            $upn += "@"
+            $upn += $Script:Domain
+            $local:baseUpn = $upnFO.samAccountName.ToString()
+            Add-CoaWriteToLog -writeTo "$local:baseUpn`t$upn" -logCode "Info" -FileName "NewUser"
+            :outer
+            foreach ($user in $script:standardUsers) {
+                $samAccountName = $user.samAccountName.ToString()             
+                $sys_created_by = $env:USERNAME.ToString()
+                if ($samAccountName -eq $local:baseUpn) {
+                    $licenseDisplayName = "Standard"
+                    $pack = standardLicensePack
+                    $license = $Script:CoaSkuInformationWorkers
+                    SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
+                    $Global:CoaUsersToWorkThrough.Remove($upnFO);
+                    break :outer
+                }
+            }
+            foreach ($user in $script:basicUsers) {
+                $samAccountName = $user.samAccountName.ToString() 
+                $sys_created_by = $env:USERNAME.ToString();
+                if ($samAccountName -eq $local:baseUpn) {
+                    $licenseDisplayName = "Basic"
+                    $pack = basicLicensePack
+                    $license = $Script:CoaSkuFirstlineWorkers
+                    SetLicense -upn $upn -Licenses $license -O365License $pack -sys_created_by $sys_created_by -licenseDisplayName $licenseDisplayName
+                    $Global:CoaUsersToWorkThrough.Remove($upnFO);
+                    break :outer
+                }
             }
         }
-    } 
+        $Global:CoaUsersToWorkThrough.Clear()
+    }
 }
 #endregion
 #region: New-CoaUser
@@ -780,7 +806,12 @@ function New-CoaUser {
     }
     $user.samAccountName = $samAccountName
     $Global:CoaUsersToWorkThrough.Add($user)
-    Write-Output $Global:CoaUsersToWorkThrough
+    if ($Global:CoaUsersToWorkThrough.Count -eq 1) {
+        return $user
+    } 
+    else {
+        Write-Output $Global:CoaUsersToWorkThrough    
+    }
 }
 <#
     .SYNOPSIS
