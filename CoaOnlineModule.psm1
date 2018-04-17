@@ -43,7 +43,8 @@ function Set-CoaVariables {
     $Script:ExchangeOnlineAdminAccount = $ExchangeOnlineAdminAccount
     $Script:RetentionPolicyE3 = $RetentionPolicyE3
     $Script:RetentionPolicyK1 = $RetentionPolicyK1
-    $Script:
+    $Script:RetentionPolicyTermOfficial = $RetentionPolicyTermOfficial
+    $Script:RetentionPolicyDeptHead = $RetentionPolicyDeptHead
     $Script:CoaSkuInformationWorkers = $CoaSkuInformationWorkers
     $Script:CoaSkuFirstlineWorkers = $CoaSkuFirstlineWorkers
     $Script:CoaSkuExoArchive = $CoaSkuExoArchive
@@ -61,20 +62,22 @@ function Set-CoaVariables {
 #>
 function Get-CoaVariables {
     $Private:CoaVariables = [ordered]@{
-        NumberOfDays               = $Script:NumberOfDays;
-        RoleAssignmentPolicy       = $Script:RoleAssignmentPolicy;
-        ClientAccessPolicyName     = $Script:ClientAccessPolicyName;
-        LitigationHoldDuration     = $Script:LitigationHoldDuration;
-        ExchangeOnlineAdminAccount = $Script:ExchangeOnlineAdminAccount;
-        RetentionPolicyE3          = $Script:RetentionPolicyE3;
-        RetentionPolicyK1          = $Script:RetentionPolicyK1;
-        CoaSkuInformationWorkers   = $Script:CoaSkuInformationWorkers;
-        CoaSkuFirstlineWorkers     = $Script:CoaSkuFirstlineWorkers;
-        CoaSkuExoArchive           = $Script:CoaSkuExoArchive;
-        CoaSkuExoAtp               = $Script:CoaSkuExoAtp;
-        standardLicenseName        = $Script:StandardLicenseName;
-        basicLicenseName           = $Script:BasicLicenseName;
-        Domain                     = $Script:Domain;
+        NumberOfDays                = $Script:NumberOfDays;
+        RoleAssignmentPolicy        = $Script:RoleAssignmentPolicy;
+        ClientAccessPolicyName      = $Script:ClientAccessPolicyName;
+        LitigationHoldDuration      = $Script:LitigationHoldDuration;
+        ExchangeOnlineAdminAccount  = $Script:ExchangeOnlineAdminAccount;
+        RetentionPolicyE3           = $Script:RetentionPolicyE3;
+        RetentionPolicyK1           = $Script:RetentionPolicyK1;
+        RetentionPolicyTermOfficial = $Script:RetentionPolicyTermOfficial;
+        RetentionPolicyDeptHead     = $Script:RetentionPolicyDeptHead;
+        CoaSkuInformationWorkers    = $Script:CoaSkuInformationWorkers;
+        CoaSkuFirstlineWorkers      = $Script:CoaSkuFirstlineWorkers;
+        CoaSkuExoArchive            = $Script:CoaSkuExoArchive;
+        CoaSkuExoAtp                = $Script:CoaSkuExoAtp;
+        standardLicenseName         = $Script:StandardLicenseName;
+        basicLicenseName            = $Script:BasicLicenseName;
+        Domain                      = $Script:Domain;
     }
     Write-Output $Private:CoaVariables
 }
@@ -882,11 +885,11 @@ function Remove-CoaUser {
     #region: Set retention policy
     try { 
         # Get Mailbox and turn the retention, type, ProhibitSendReceiveQuota, ProhibitSendQuota, IssueWarningQuota
-        Set-Mailbox -identity $SamAccountName -RetentionPolicy $retentionPolicy -ErrorAction Stop -ErrorVariable err3
-        Add-CoaWriteToLog -writeTo "Set-Mailbox`t$SamAccountName`t$retentionPolicy" -logCode "Success" -FileName "RemoveUser"
+        Set-Mailbox -identity $SamAccountName -RetentionPolicy $Script:RetentionPolicyTermOfficial -ErrorAction Stop -ErrorVariable err3
+        Add-CoaWriteToLog -writeTo "Set-Mailbox`t$SamAccountName`t$Script:RetentionPolicyTermOfficial" -logCode "Success" -FileName "RemoveUser"
     }
     catch {
-        Add-CoaWriteToLog -writeTo "Set-Mailbox`t$SamAccountName`t$retentionPolicy`t$err3" -logCode "Error" -FileName "RemoveUser"
+        Add-CoaWriteToLog -writeTo "Set-Mailbox`t$SamAccountName`t$Script:RetentionPolicyTermOfficial`t$err3" -logCode "Error" -FileName "RemoveUser"
     }
     #endregion
 }
