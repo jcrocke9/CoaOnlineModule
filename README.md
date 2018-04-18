@@ -1,4 +1,3 @@
-# CoaOnlineModule
 # What it does
 * License Microsoft Online users & mailboxes
 * Remove users licenses
