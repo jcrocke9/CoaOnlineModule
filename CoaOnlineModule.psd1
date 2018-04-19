@@ -12,39 +12,39 @@
 
     # Script module or binary module file associated with this manifest
     #RootModule = ''
-    
+
     # Version number of this module.
     ModuleVersion     = '1.0'
-    
+
     # ID used to uniquely identify this module
     GUID              = '1889cf05-1f5c-40dc-83dd-1bfcd22d13f8'
-    
+
     # Author of this module
     Author            = 'joseph.crockett@alexandriava.gov'
-    
+
     # Company or vendor of this module
     CompanyName       = 'City of Alexandria, Virginia'
-    
+
     # Copyright statement for this module
     Copyright         = '(c) 2018 City of Alexandria, VA'
-    
+
     # Description of the functionality provided by this module
     Description       = 'Loads scripts specific to COA business needs, specifically new hires and terminations in Office 365'
-    
+
     # Minimum version of the Windows PowerShell engine required by this module
     PowerShellVersion = '5.1'
-    
+
     # Name of the Windows PowerShell host required by this module
     # PowerShellHostName = ''
-    
+
     # Minimum version of the Windows PowerShell host required by this module
     # PowerShellHostVersion = ''
-    
+
     # Modules that must be imported into the global environment prior to importing this module
-    RequiredModules   = @(CoaLoggingModule)
+    # RequiredModules   = ''
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = "Set-CoaMailboxConfiguration", "Set-CoaExchangeAttributes", "Set-CoaExoAttributes", "New-CoaUser"
+    FunctionsToExport = "Set-CoaMailboxConfiguration", "Set-CoaExchangeAttributes", "Set-CoaExoAttributes", "New-CoaUser","Get-CoaVariables", "Set-CoaVariables", "Clear-CoaUser", "Remove-CoaUser"
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 
     CmdletsToExport   = @()
@@ -79,7 +79,7 @@
             # ExternalModuleDependencies = ''
 
         } # End of PSData hashtable
-    
+
     } # End of PrivateData hashtable
 
 
