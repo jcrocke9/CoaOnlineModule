@@ -17,6 +17,7 @@ Import-Module -Name C:\alex\CoaOnlineModule\CoaLoggingModule.psm1 -Function Add-
 #>
 function Set-CoaVariables
 {
+    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
     Param (
         # Default -120. The number of days backward (negative) in time to gather new accounts and ensure they are in-policy.
         [Parameter()]
@@ -66,6 +67,7 @@ function Set-CoaVariables
 #>
 function Get-CoaVariables
 {
+    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
     $Private:CoaVariables = [ordered]@{
         NumberOfDays                = $Script:NumberOfDays;
         RoleAssignmentPolicy        = $Script:RoleAssignmentPolicy;
@@ -109,6 +111,7 @@ function Get-CoaVariables
 #>
 function Set-CoaMailboxConfiguration
 {
+    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
     Param (
         # Default -120. The number of days backward (negative) in time to gather new accounts and ensure they are in-policy.
         [Parameter()]
@@ -489,6 +492,7 @@ function SetLicenseAttributeK1
 #>
 function Set-CoaExchangeAttributes
 {
+    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
     Param (
         [parameter(
             Position = 0,
@@ -551,12 +555,6 @@ function Set-CoaExchangeAttributes
 #endregion
 #region: Sets ExO Attributes
 #region: Private functions for ExO
-function Show-CoaCustomError
-{
-    param ([string]$subject, [string]$body)
-    Write-Error "`n$subject`n$body"
-    Return;
-}
 function basicLicensePack
 {
     $disabledPlans = @()
@@ -730,6 +728,7 @@ function SetLicense
 #>
 function Set-CoaExoAttributes
 {
+    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
     Param (
         [parameter(
             Position = 0,
@@ -985,6 +984,7 @@ $Global:CoaUsersToWorkThrough = [System.Collections.Generic.List[UserObject]]::n
 #>
 function New-CoaUser
 {
+    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
     Param (
         [parameter(Mandatory = $true,
             Position = 0)]
@@ -1045,6 +1045,8 @@ function Clear-CoaUser
 #>
 function Remove-CoaUser
 {
+    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki",
+        DefaultParameterSetName="SingleUser")]
     param(
         [parameter(Position = 0,
             Mandatory = $true,
