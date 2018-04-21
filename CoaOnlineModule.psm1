@@ -134,7 +134,7 @@ function Set-CoaMailboxConfiguration
     $UserList = @()
     Clear-Variable UserList
 
-    $ErrorActionPreference = "Stop"
+    $Global:ErrorActionPreference = "Stop"
     $UserList = Get-Mailbox -ResultSize unlimited -Filter {(ArchiveStatus -eq $None)} | Where-Object {$_.WhenCreated -gt (get-date).AddDays($NumberOfDays)} | Select-Object -ExpandProperty userPrincipalName
     Write-Output "User count found: " + $UserList.Count
     $logCode = "Get"
@@ -150,7 +150,7 @@ function Set-CoaMailboxConfiguration
         }
         catch
         {
-
+            Write-Output $_.Exception.Message
             $writeTo = "Enable-Mailbox: identity $upn Archive"
             $logCode = "Error"
             Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
@@ -164,6 +164,7 @@ function Set-CoaMailboxConfiguration
         }
         catch
         {
+            Write-Output $_.Exception.Message
             $writeTo = "Set-Mailbox: FAILED set mailbox $upn litigation hold and assignment policy"
             $logCode = "Error"
             Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
@@ -177,6 +178,7 @@ function Set-CoaMailboxConfiguration
         }
         catch
         {
+            Write-Output $_.Exception.Message
             $writeTo = "Add-MailboxPermission: FAILED added $upn mailbox permission for COA Admin"
             $logCode = "Error"
             Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
@@ -190,6 +192,7 @@ function Set-CoaMailboxConfiguration
         }
         catch
         {
+            Write-Output $_.Exception.Message
             $writeTo = "Set-Clutter: FAILED set mailbox $upn clutter to false"
             $logCode = "Error"
             Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
@@ -208,6 +211,7 @@ function Set-CoaMailboxConfiguration
             }
             catch
             {
+                Write-Output $_.Exception.Message
                 $writeTo = "Set-CASMailbox: FAILED set mailbox $upn client access permissions"
                 $logCode = "Error"
                 Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
@@ -219,6 +223,7 @@ function Set-CoaMailboxConfiguration
             }
             catch
             {
+                Write-Output $_.Exception.Message
                 $writeTo = "Get-MSOLUser -UserPrincipalName $upn FAILED"
                 $logCode = "Error"
                 Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
@@ -236,6 +241,7 @@ function Set-CoaMailboxConfiguration
                 }
                 catch
                 {
+                    Write-Output $_.Exception.Message
                     $writeTo = "Set-Mailbox: FAILED set mailbox $upn policy to $RetentionPolicyE3"
                     $logCode = "Error"
                     Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
@@ -253,6 +259,7 @@ function Set-CoaMailboxConfiguration
                 }
                 catch
                 {
+                    Write-Output $_.Exception.Message
                     $writeTo = "Set-Mailbox: FAILED set mailbox $upn policy to $RetentionPolicyK1"
                     $logCode = "Error"
                     Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
@@ -264,7 +271,7 @@ function Set-CoaMailboxConfiguration
     }
 
     Clear-Variable UserList
-    $ErrorActionPreference = "Continue"
+    $Global:ErrorActionPreference = "Continue"
 }
 #endregion
 #region: Sets Active Directory attributes for Exchange Online
@@ -279,7 +286,7 @@ function OpenLog
 function QueryAdToValidateUsers
 {
     param ([string]$samAccountName)
-    $ErrorActionPreference = "stop"
+    $Global:ErrorActionPreference = "Stop"
     try
     {
         $mail = Get-ADUser $samAccountName -Properties mail | Select-Object mail -ExpandProperty mail
@@ -307,7 +314,7 @@ function QueryAdToValidateUsers
             $logCode = "Error"
             $CurrentFileName = "NewUser"
             Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
-            Show-CoaCustomError -subject "New-MSOLUser Error" -body "Get-ADUser: samAccountName cannot be found for $samAccountName"
+            Write-Output "Get-ADUser: samAccountName cannot be found for $samAccountName"
         }
         $writeTo = "$samAccountName`t$userAccountControl`t$mail`t$department";
         $logCode = "Start"
@@ -316,22 +323,26 @@ function QueryAdToValidateUsers
     }
     catch
     {
-        if ($user.Length -gt 20)
+        $problemUsers.Add($samAccountName);
+        if ($samAccountName.Length -gt 20)
         {
+            Write-Output $_.Exception.Message
+            Write-Output "The user name $samAccountName is more than 20 characters"
             $writeTo = "The user name $samAccountName is more than 20 characters"
             $logCode = "Error"
             $CurrentFileName = "NewUser"
             Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
-            Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user name $samAccountName is more than 20 characters; no account was created."
         }
-        $problemUsers.Add($samAccountName);
-        $writeTo = "Get-ADUser: samAccountName cannot be found for $samAccountName"
-        $logCode = "Error"
-        $CurrentFileName = "NewUser"
-        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
-        Show-CoaCustomError -subject "New-MSOLUser Error" -body "Get-ADUser: samAccountName cannot be found for $samAccountName"
+        else
+        {
+            Write-Output $_.Exception.Message
+            $writeTo = "Get-ADUser: samAccountName cannot be found for $samAccountName"
+            $logCode = "Error"
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+        }
     }
-    $ErrorActionPreference = "continue"
+    $Global:ErrorActionPreference = "continue"
     Return;
 }
 #endregion
@@ -351,6 +362,7 @@ function SetMailAndSmtpAttributes
         }
         catch
         {
+            Write-Output $_.Exception.Message
             $logCode = "Error"
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
         }
@@ -372,6 +384,7 @@ function SetMailAndSmtpAttributes
         }
         catch
         {
+            Write-Output $_.Exception.Message
             $logCode = "Error"
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
         }
@@ -398,6 +411,7 @@ function SetLicenseAttributeE3
         }
         catch
         {
+            Write-Output $_.Exception.Message
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
             $logCode = "Error"
             $CurrentFileName = "NewUser"
@@ -417,6 +431,7 @@ function SetLicenseAttributeE3
         }
         catch
         {
+            Write-Output $_.Exception.Message
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
             $logCode = "Error"
             $CurrentFileName = "NewUser"
@@ -441,6 +456,7 @@ function SetLicenseAttributeK1
         }
         catch
         {
+            Write-Output $_.Exception.Message
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
             $logCode = "Error"
             $CurrentFileName = "NewUser"
@@ -460,6 +476,7 @@ function SetLicenseAttributeK1
         }
         catch
         {
+            Write-Output $_.Exception.Message
             "Set-ADUser: $user Error: $_" | Tee-Object -Variable writeTo
             $logCode = "Error"
             $CurrentFileName = "NewUser"
@@ -531,7 +548,8 @@ function Set-CoaExchangeAttributes
 
         foreach ($problemUser in $problemUsers)
         {
-            $UserList.Remove("$problemUser");
+            $foundProblemUser = $UserList.Find( {param($u) $u.samAccountName -match $problemUser})
+            $UserList.Remove($foundProblemUser);
         }
 
         foreach ($user in $UserList)
@@ -596,8 +614,7 @@ function Set-ValidateUsersUpn
         $logCode = "Else"
         $CurrentFileName = "NewUser"
         Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
-        Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
-        # Need to skip to the next iteration
+        Write-Output $errMsg
     }
 
     if ($upn -like "*onmicrosoft*")
@@ -610,6 +627,7 @@ function Set-ValidateUsersUpn
         }
         catch
         {
+            Write-Output $_.Exception.Message
             $logCode = "Error"
             "Set-MsolUserPrincipalName: $upn Error: $_" | Tee-Object -Variable writeTo
         }
@@ -635,8 +653,8 @@ function Set-ValidateUsersUpn
         $logCode = "Error"
         $CurrentFileName = "NewUser"
         Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
-        Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user $user cannot be found in MSOL, and has been removed from processing."
-        Return;
+        Write-Output $writeTo
+        Exit;
     }
 }
 function SetLicense
@@ -654,6 +672,7 @@ function SetLicense
         }
         catch
         {
+            Write-Output $_.Exception.Message
             $logCode = "Error"
             "Set-MsolUser: $upn Error: $_" | Tee-Object -Variable writeTo
         }
@@ -685,6 +704,7 @@ function SetLicense
         }
         catch
         {
+            Write-Output $_.Exception.Message
             $logCode = "Error"
             "Set-MsolUserLicense: $upn Error: $_" | Tee-Object -Variable writeTo
             $CurrentFileName = "NewUser"
@@ -703,6 +723,7 @@ function SetLicense
             }
             catch
             {
+                Write-Output $_.Exception.Message
                 $logCode = "Error"
                 "Set-Mailbox: FAILED adding Archive license TO $UPN" | Tee-Object -Variable writeTo
                 $CurrentFileName = "NewUser"
@@ -845,7 +866,8 @@ function Remove-CoaUserActiveDirectory
     }
     catch
     {
-        $writeTo = "Set-ADUser`t$SamAccountName`tCould not replace authOrig`t$err1"
+        Write-Output $_.Exception.Message
+        $writeTo = "Set-ADUser`t$SamAccountName`tCould not replace authOrig`t${$err1.Exception.Message}"
         $logCode = "Error"
         $CurrentFileName = "RemoveUser"
         Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
@@ -860,35 +882,45 @@ function Remove-CoaUserActiveDirectory
     }
     catch
     {
-        $writeTo = "Set-ADUser`t$SamAccountName`tCould not replace msExchHideFromAddressLists`t$err2"
+        Write-Output $_.Exception.Message
+        $writeTo = "Set-ADUser`t$SamAccountName`tCould not replace msExchHideFromAddressLists`t${$err2.Exception.Message}"
         $logCode = "Error"
         $CurrentFileName = "RemoveUser"
         Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
     }
-    Get-ADPrincipalGroupMembership -Identity $SamAccountName | Select-Object samAccountName -ExpandProperty samAccountName | ForEach-Object {
-        $groupName = $_
-        if ($groupName -ne "Domain Users")
-        {
-            try
+    try
+    {
+        Get-ADPrincipalGroupMembership -Identity $SamAccountName | Select-Object samAccountName -ExpandProperty samAccountName | ForEach-Object {
+            $groupName = $_
+            if ($groupName -ne "Domain Users")
             {
-                Remove-ADPrincipalGroupMembership -Identity $SamAccountName -MemberOf $groupName -Confirm:$false -ErrorAction Stop
-                #region logging
-                $writeTo = "Remove-ADPrincipalGroupMembership:`t$SamAccountName`t$groupName"
-                $logCode = "Success"
-                $CurrentFileName = "RemoveUser"
-                Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
-                #endregion
-            }
-            catch
-            {
-                #region logging
-                $writeTo = "Remove-ADPrincipalGroupMembership:`t$SamAccountName`t$groupName"
-                $logCode = "Error"
-                $CurrentFileName = "RemoveUser"
-                Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
-                #endregion
+                try
+                {
+                    Remove-ADPrincipalGroupMembership -Identity $SamAccountName -MemberOf $groupName -Confirm:$false -ErrorAction Stop
+                    $writeTo = "Remove-ADPrincipalGroupMembership:`t$SamAccountName`t$groupName"
+                    $logCode = "Success"
+                    $CurrentFileName = "RemoveUser"
+                    Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+                }
+                catch
+                {
+                    Write-Output $_.Exception.Message
+                    $writeTo = "Remove-ADPrincipalGroupMembership:`t$SamAccountName`t$groupName"
+                    $logCode = "Error"
+                    $CurrentFileName = "RemoveUser"
+                    Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+                }
             }
         }
+    }
+    catch
+    {
+        Write-Output $_.Exception.Message
+        $writeTo = "Set-ADUser`t$SamAccountName`tCould not find for Group Membership`t${$err4.Exception.Message}"
+        $logCode = "Error"
+        $CurrentFileName = "RemoveUser"
+        Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+
     }
 }
 function Remove-CoaUserMsol
@@ -924,7 +956,7 @@ function Remove-CoaUserMsol
         $logCode = "Else"
         $CurrentFileName = "RemoveUser"
         Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
-        Show-CoaCustomError -subject "New-MSOLUser Error" -body "The user $SamAccountName cannot be found in MSOL, and has been removed from processing."
+        Write-Output $errMsg
         # Need to skip to the next iteration
         break
     }
@@ -938,7 +970,8 @@ function Remove-CoaUserMsol
     }
     catch
     {
-        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$licenses`t$err" -logCode "Error" -FileName "RemoveUser"
+        Write-Output $_.Exception.Message
+        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$licenses`t${$_.Exception.Message}" -logCode "Error" -FileName "RemoveUser"
     }
 }
 function Set-CoaUserRetentionPolicy
@@ -957,7 +990,8 @@ function Set-CoaUserRetentionPolicy
     }
     catch
     {
-        Add-CoaWriteToLog -writeTo "Set-Mailbox`t$SamAccountName`t$Script:RetentionPolicyTermOfficial`t$err3" -logCode "Error" -FileName "RemoveUser"
+        Write-Output $_.Exception.Message
+        Add-CoaWriteToLog -writeTo "Set-Mailbox`t$SamAccountName`t$Script:RetentionPolicyTermOfficial`t${$_.Exception.Message}" -logCode "Error" -FileName "RemoveUser"
     }
 }
 #endregion
