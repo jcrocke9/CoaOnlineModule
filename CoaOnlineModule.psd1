@@ -8,31 +8,31 @@
 
 @{
     # Script module or binary module file associated with this manifest
-    ModuleToProcess   = '.\CoaOnlineModule.psm1'
+    ModuleToProcess      = '.\CoaOnlineModule.psm1'
 
     # Script module or binary module file associated with this manifest
     #RootModule = ''
 
     # Version number of this module.
-    ModuleVersion     = '1.0'
+    ModuleVersion        = '1.0'
 
     # ID used to uniquely identify this module
-    GUID              = '1889cf05-1f5c-40dc-83dd-1bfcd22d13f8'
+    GUID                 = '1889cf05-1f5c-40dc-83dd-1bfcd22d13f8'
 
     # Author of this module
-    Author            = 'joseph.crockett@alexandriava.gov'
+    Author               = 'joseph.crockett@alexandriava.gov'
 
     # Company or vendor of this module
-    CompanyName       = 'City of Alexandria, Virginia'
+    CompanyName          = 'City of Alexandria, Virginia'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2018 City of Alexandria, VA'
+    Copyright            = '(c) 2018 City of Alexandria, VA'
 
     # Description of the functionality provided by this module
-    Description       = 'Loads scripts specific to COA business needs, specifically new hires and terminations in Office 365'
+    Description          = 'Loads scripts specific to COA business needs, specifically new hires and terminations in Office 365'
 
     # Minimum version of the Windows PowerShell engine required by this module
-    PowerShellVersion = '5.1'
+    PowerShellVersion    = '5.1'
 
     # Name of the Windows PowerShell host required by this module
     # PowerShellHostName = ''
@@ -44,22 +44,25 @@
     # RequiredModules   = ''
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = "Set-CoaMailboxConfiguration", "Set-CoaExchangeAttributes", "Set-CoaExoAttributes", "New-CoaUser","Get-CoaVariables", "Set-CoaVariables", "Clear-CoaUser", "Remove-CoaUser"
+    # FunctionsToExport = ''
+
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 
-    CmdletsToExport   = @()
+    CmdletsToExport      = @("Set-CoaMailboxConfiguration", "Set-CoaExchangeAttributes", "Set-CoaExoAttributes", "New-CoaUser", "Get-CoaVariables", "Set-CoaVariables", "Clear-CoaUser", "Remove-CoaUser")
 
     # Variables to export from this module
     # VariablesToExport = @()
 
     # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
-    AliasesToExport   = @()
+    AliasesToExport      = @()
 
     # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
-    PrivateData       = @{
+    PrivateData          = @{
 
         PSData = @{
-
+            # The primary categorization of this module (from the TechNet Gallery tech tree).
+            Category     = "Scripting Techniques"
+            
             # Tags applied to this module. These help with module discovery in online galleries.
             Tags         = @('O365', 'MSOL', 'License', 'Management', 'SKU', 'Plan', 'AzueAD', 'Bulk')
 
@@ -67,7 +70,7 @@
             # LicenseUri = ''
 
             # A URL to the main website for this project.
-            # ProjectUri = ''
+            ProjectUri   = 'https://github.com/jcrocke9/CoaOnlineModule'
 
             # A URL to an icon representing this module.
             # IconUri = ''
@@ -82,5 +85,6 @@
 
     } # End of PrivateData hashtable
 
-
+    # Default prefix for commands exported from this module. Override the default prefix using Import-Module -Prefix.
+    DefaultCommandPrefix = 'Coa'
 }

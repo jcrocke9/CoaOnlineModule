@@ -1,4 +1,4 @@
-#Require -Version 5.0
+#Require -Version 5.1
 
 using namespace System;
 using namespace System.Text;
@@ -17,7 +17,7 @@ Import-Module -Name C:\alex\CoaOnlineModule\CoaLoggingModule.psm1 -Function Add-
 #>
 function Set-CoaVariables
 {
-    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
+    [CmdletBinding()]
     Param (
         # Default -120. The number of days backward (negative) in time to gather new accounts and ensure they are in-policy.
         [Parameter()]
@@ -34,8 +34,11 @@ function Set-CoaVariables
         [string]$RetentionPolicyDeptHead = "COA Department Head Policy",
         [string]$CoaSkuInformationWorkers = "ALEXANDRIAVA1:ENTERPRISEPACK_GOV",
         [string]$CoaSkuFirstlineWorkers = "ALEXANDRIAVA1:DESKLESSPACK_GOV",
+        [string[]]$CoaSkuFirstlineWorkersDisabledPlans,
+        [string[]]$CoaSkuInformationWorkersDisabledPlans = "RMS_S_ENTERPRISE_GOV",
         [string]$CoaSkuExoArchive = "ALEXANDRIAVA1:EXCHANGEARCHIVE_ADDON",
         [string]$CoaSkuExoAtp = "ALEXANDRIAVA1:ATP_ENTERPRISE_GOV",
+        [string]$CoaSkuEms = "ALEXANDRIAVA1:EMS",
         [string]$standardLicenseName = "emailStandard_createAlexID",
         [string]$basicLicenseName = "emailBasic_createAlexID",
         [string]$Domain = "alexandriava.gov"
@@ -52,8 +55,11 @@ function Set-CoaVariables
     $Script:RetentionPolicyDeptHead = $RetentionPolicyDeptHead
     $Script:CoaSkuInformationWorkers = $CoaSkuInformationWorkers
     $Script:CoaSkuFirstlineWorkers = $CoaSkuFirstlineWorkers
+    $Script:CoaSkuFirstlineWorkersDisabledPlans = $CoaSkuFirstlineWorkersDisabledPlans
+    $Script:CoaSkuInformationWorkersDisabledPlans = $CoaSkuInformationWorkersDisabledPlans
     $Script:CoaSkuExoArchive = $CoaSkuExoArchive
     $Script:CoaSkuExoAtp = $CoaSkuExoAtp
+    $Script:CoaSkuEms = $CoaSkuEms
     $Script:StandardLicenseName = $standardLicenseName
     $Script:BasicLicenseName = $basicLicenseName
     $Script:Domain = $Domain
@@ -67,51 +73,36 @@ function Set-CoaVariables
 #>
 function Get-CoaVariables
 {
-    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
+    [CmdletBinding()]
     $Private:CoaVariables = [ordered]@{
-        NumberOfDays                = $Script:NumberOfDays;
-        RoleAssignmentPolicy        = $Script:RoleAssignmentPolicy;
-        ClientAccessPolicyName      = $Script:ClientAccessPolicyName;
-        LitigationHoldDuration      = $Script:LitigationHoldDuration;
-        ExchangeOnlineAdminAccount  = $Script:ExchangeOnlineAdminAccount;
-        authOrig                    = $Script:authOrig
-        RetentionPolicyE3           = $Script:RetentionPolicyE3;
-        RetentionPolicyK1           = $Script:RetentionPolicyK1;
-        RetentionPolicyTermOfficial = $Script:RetentionPolicyTermOfficial;
-        RetentionPolicyDeptHead     = $Script:RetentionPolicyDeptHead;
-        CoaSkuInformationWorkers    = $Script:CoaSkuInformationWorkers;
-        CoaSkuFirstlineWorkers      = $Script:CoaSkuFirstlineWorkers;
-        CoaSkuExoArchive            = $Script:CoaSkuExoArchive;
-        CoaSkuExoAtp                = $Script:CoaSkuExoAtp;
-        standardLicenseName         = $Script:StandardLicenseName;
-        basicLicenseName            = $Script:BasicLicenseName;
-        Domain                      = $Script:Domain;
+        NumberOfDays                          = $Script:NumberOfDays;
+        RoleAssignmentPolicy                  = $Script:RoleAssignmentPolicy;
+        ClientAccessPolicyName                = $Script:ClientAccessPolicyName;
+        LitigationHoldDuration                = $Script:LitigationHoldDuration;
+        ExchangeOnlineAdminAccount            = $Script:ExchangeOnlineAdminAccount;
+        authOrig                              = $Script:authOrig
+        RetentionPolicyE3                     = $Script:RetentionPolicyE3;
+        RetentionPolicyK1                     = $Script:RetentionPolicyK1;
+        RetentionPolicyTermOfficial           = $Script:RetentionPolicyTermOfficial;
+        RetentionPolicyDeptHead               = $Script:RetentionPolicyDeptHead;
+        CoaSkuInformationWorkers              = $Script:CoaSkuInformationWorkers;
+        CoaSkuFirstlineWorkers                = $Script:CoaSkuFirstlineWorkers;
+        CoaSkuInformationWorkersDisabledPlans = $Script:CoaSkuInformationWorkersDisabledPlans
+        CoaSkuFirstlineWorkersDisabledPlans   = $Script:CoaSkuFirstlineWorkersDisabledPlans
+        CoaSkuExoArchive                      = $Script:CoaSkuExoArchive;
+        CoaSkuExoAtp                          = $Script:CoaSkuExoAtp;
+        CoaSkuEms                             = $Script:CoaSkuEms
+        standardLicenseName                   = $Script:StandardLicenseName;
+        basicLicenseName                      = $Script:BasicLicenseName;
+        Domain                                = $Script:Domain;
     }
     Write-Output $Private:CoaVariables
 }
 #endregion
 #region: Mailbox Configuration
-<#
-    .Synopsis
-    Post-creation Exchange Online mailbox configuration for new accounts.
-
-    .Description
-    These configuration modifications put the mailbox in-policy for COA business needs.
-
-    .Parameter NumberOfDays
-    Default -120. The number of days backward (negative!) in time to gather new accounts and ensure they are in-policy.
-
-    .Example
-    # Runs the configuration for the new mailboxes created in the past 120 days.
-    Set-CoaMailboxConfiguration
-
-    .Example
-    # Runs the configuration for the new mailboxes created in the past 30 days.
-    Set-CoaMailboxConfiguration -NumberOfDays 30
-#>
 function Set-CoaMailboxConfiguration
 {
-    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
+    [CmdletBinding()]
     Param (
         # Default -120. The number of days backward (negative) in time to gather new accounts and ensure they are in-policy.
         [Parameter()]
@@ -129,7 +120,7 @@ function Set-CoaMailboxConfiguration
     )
     $logCode = "Start"
     $writeTo = "Starting Mailbox Configuration Script"
-    Add-CoaAdd-CoaWriteToLog -writeTo $writeTo -logCode $logCode -FilePath $FileName
+    Add-CoaWriteToLog -writeTo $writeTo -logCode $logCode -FilePath $FileName
 
     $UserList = @()
     Clear-Variable UserList
@@ -272,6 +263,24 @@ function Set-CoaMailboxConfiguration
 
     Clear-Variable UserList
     $Global:ErrorActionPreference = "Continue"
+    <#
+    .Synopsis
+    Post-creation Exchange Online mailbox configuration for new accounts.
+
+    .Description
+    These configuration modifications put the mailbox in-policy for COA business needs.
+
+    .Parameter NumberOfDays
+    Default -120. The number of days backward (negative!) in time to gather new accounts and ensure they are in-policy.
+
+    .Example
+    # Runs the configuration for the new mailboxes created in the past 120 days.
+    Set-CoaMailboxConfiguration
+
+    .Example
+    # Runs the configuration for the new mailboxes created in the past 30 days.
+    Set-CoaMailboxConfiguration -NumberOfDays 30
+#>
 }
 #endregion
 #region: Sets Active Directory attributes for Exchange Online
@@ -485,7 +494,10 @@ function SetLicenseAttributeK1
     }
 }
 #endregion
-<#
+
+function Set-CoaExchangeAttributes
+{
+    <#
     .Synopsis
     Sets new mailbox accounts up with the standard policies of COA
 
@@ -507,9 +519,7 @@ function SetLicenseAttributeK1
     Set-CoaExchangeAttributes
 
 #>
-function Set-CoaExchangeAttributes
-{
-    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
+    [CmdletBinding()]
     Param (
         [parameter(
             Position = 0,
@@ -575,15 +585,12 @@ function Set-CoaExchangeAttributes
 #region: Private functions for ExO
 function basicLicensePack
 {
-    $disabledPlans = @()
-    $O365License = New-MsolLicenseOptions -AccountSkuId $Script:CoaSkuFirstlineWorkers -DisabledPlans $disabledPlans
+    $O365License = New-MsolLicenseOptions -AccountSkuId $Script:CoaSkuFirstlineWorkers -DisabledPlans $Script:CoaSkuFirstlineWorkersDisabledPlans
     Return $O365License;
 }
 function standardLicensePack
 {
-    $disabledPlans = @()
-    $disabledPlans += "YAMMER_ENTERPRISE"
-    $O365License = New-MsolLicenseOptions -AccountSkuId $Script:CoaSkuInformationWorkers -DisabledPlans $disabledPlans
+    $O365License = New-MsolLicenseOptions -AccountSkuId $Script:CoaSkuInformationWorkers -DisabledPlans $Script:CoaSkuInformationWorkersDisabledPlans
     Return $O365License;
 }
 function Set-ValidateUsersUpn
@@ -730,6 +737,21 @@ function SetLicense
                 Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
             }
         }
+        try
+        {
+            Set-MsolUserLicense -UserPrincipalName $upn -AddLicenses $Script:CoaSkuEms -ErrorAction Stop
+            $writeTo = "Set-MsolUserLicense: Successfully added EMS to $upn"
+            $logCode = "Success"
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+        }
+        catch
+        {
+            $logCode = "Error"
+            "Set-Mailbox: FAILED adding EMS license TO $UPN" | Tee-Object -Variable writeTo
+            $CurrentFileName = "NewUser"
+            Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
+        }
     }
 }
 #endregion
@@ -749,7 +771,7 @@ function SetLicense
 #>
 function Set-CoaExoAttributes
 {
-    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
+    [CmdletBinding()]
     Param (
         [parameter(
             Position = 0,
@@ -966,12 +988,12 @@ function Remove-CoaUserMsol
     try
     {
         Set-MsolUserLicense -UserPrincipalName $upn -RemoveLicenses $LicenseLineItem -ErrorAction Stop -ErrorVariable err
-        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$LicenseLineItem" -logCode "Success" -FileName "RemoveUser"
+        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`tRemove`t$upn`t$LicenseLineItem" -logCode "Success" -FileName "RemoveUser"
     }
     catch
     {
         Write-Output $_.Exception.Message
-        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`t$upn`t$licenses`t${$_.Exception.Message}" -logCode "Error" -FileName "RemoveUser"
+        Add-CoaWriteToLog -writeTo "Set-MsolUserLicense`tRemove`t$upn`t$licenses`t${$_.Exception.Message}" -logCode "Error" -FileName "RemoveUser"
     }
 }
 function Set-CoaUserRetentionPolicy
@@ -1018,7 +1040,7 @@ $Global:CoaUsersToWorkThrough = [System.Collections.Generic.List[UserObject]]::n
 #>
 function New-CoaUser
 {
-    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki")]
+    [CmdletBinding()]
     Param (
         [parameter(Mandatory = $true,
             Position = 0)]
@@ -1079,8 +1101,8 @@ function Clear-CoaUser
 #>
 function Remove-CoaUser
 {
-    [CmdletBinding(HelpURI="https://github.com/jcrocke9/CoaOnlineModule/wiki",
-        DefaultParameterSetName="SingleUser")]
+    [CmdletBinding(,
+        DefaultParameterSetName = "SingleUser")]
     param(
         [parameter(Position = 0,
             Mandatory = $true,
