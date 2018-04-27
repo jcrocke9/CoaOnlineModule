@@ -8,10 +8,10 @@
 
 @{
     # Script module or binary module file associated with this manifest
-    ModuleToProcess      = '.\CoaOnlineModule.psm1'
+    #ModuleToProcess      = '.\CoaOnlineModule.psm1'
 
     # Script module or binary module file associated with this manifest
-    #RootModule = ''
+    RootModule = '.\CoaOnlineModule.psm1'
 
     # Version number of this module.
     ModuleVersion        = '1.0'
@@ -62,7 +62,7 @@
         PSData = @{
             # The primary categorization of this module (from the TechNet Gallery tech tree).
             Category     = "Scripting Techniques"
-            
+
             # Tags applied to this module. These help with module discovery in online galleries.
             Tags         = @('O365', 'MSOL', 'License', 'Management', 'SKU', 'Plan', 'AzueAD', 'Bulk')
 

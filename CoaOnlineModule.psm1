@@ -6,7 +6,7 @@ using namespace System.Diagnostics;
 using namespace System.Linq;
 using namespace System.Collections.Generic;
 Import-Module ActiveDirectory;
-Import-Module -Name C:\alex\CoaOnlineModule\CoaLoggingModule.psm1 -Function Add-CoaWriteToLog
+Import-Module CoaLoggingModule;
 #region: Variables
 <#
     .Synopsis
@@ -36,7 +36,7 @@ function Set-CoaVariables
         [string]$CoaSkuFirstlineWorkers = "ALEXANDRIAVA1:DESKLESSPACK_GOV",
         [string[]]$CoaSkuFirstlineWorkersDisabledPlans,
         [string[]]$CoaSkuInformationWorkersDisabledPlans = "RMS_S_ENTERPRISE_GOV",
-        [string]$CoaSkuExoArchive = "ALEXANDRIAVA1:EXCHANGEARCHIVE_ADDON",
+        [string]$CoaSkuExoArchive = "ALEXANDRIAVA1:EXCHANGEARCHIVE_ADDON_GOV",
         [string]$CoaSkuExoAtp = "ALEXANDRIAVA1:ATP_ENTERPRISE_GOV",
         [string]$CoaSkuEms = "ALEXANDRIAVA1:EMS",
         [string]$standardLicenseName = "emailStandard_createAlexID",
