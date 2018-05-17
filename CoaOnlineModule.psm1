@@ -105,9 +105,7 @@ function Set-CoaMailboxConfiguration
     [CmdletBinding()]
     Param (
         # Default -120. The number of days backward (negative) in time to gather new accounts and ensure they are in-policy.
-        [Parameter()]
-        [int]
-        $NumberOfDays = $Script:NumberOfDays,
+        [Parameter()][int]$NumberOfDays = $Script:NumberOfDays,
         [string]$FileName = "MailboxConfiguration",
         [string]$RoleAssignmentPolicy = $Script:RoleAssignmentPolicy,
         [string]$ClientAccessPolicyName = $Script:ClientAccessPolicyName,
@@ -120,6 +118,7 @@ function Set-CoaMailboxConfiguration
     )
     $logCode = "Start"
     $writeTo = "Starting Mailbox Configuration Script"
+    $FileName = "MailboxConfiguration"
     Add-CoaWriteToLog -writeTo $writeTo -logCode $logCode -FilePath $FileName
 
     $UserList = @()
