@@ -134,34 +134,6 @@ function Set-CoaMailboxConfiguration
     {
         try
         {
-            Enable-Mailbox -identity $upn -Archive
-            $writeTo = "Enable-Mailbox: identity $upn Archive"
-            $logCode = "Success"
-            Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
-        }
-        catch
-        {
-            Write-Output $_.Exception.Message
-            $writeTo = "Enable-Mailbox: identity $upn Archive"
-            $logCode = "Error"
-            Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
-        }
-        try
-        {
-            Set-Mailbox -identity $upn -LitigationHoldEnabled $True -LitigationHoldDuration $LitigationHoldDuration -RoleAssignmentPolicy $RoleAssignmentPolicy
-            $writeTo = "Set-Mailbox: Successfully set mailbox $upn litigation hold and assignment policy"
-            $logCode = "Success"
-            Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
-        }
-        catch
-        {
-            Write-Output $_.Exception.Message
-            $writeTo = "Set-Mailbox: FAILED set mailbox $upn litigation hold and assignment policy"
-            $logCode = "Error"
-            Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
-        }
-        try
-        {
             Add-MailboxPermission -identity $upn -User $ExchangeOnlineAdminAccount -AccessRights fullaccess -InheritanceType all -AutoMapping $false
             $writeTo = "Add-MailboxPermission: Successfully added $upn mailbox permission for $ExchangeOnlineAdminAccount"
             $logCode = "Success"
@@ -191,6 +163,34 @@ function Set-CoaMailboxConfiguration
         $RecipientTypeDetails = (Get-Mailbox -Identity $upn).RecipientTypeDetails
         if ($RecipientTypeDetails -eq "UserMailbox")
         {
+            try
+            {
+                Enable-Mailbox -identity $upn -Archive
+                $writeTo = "Enable-Mailbox: identity $upn Archive"
+                $logCode = "Success"
+                Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
+            }
+            catch
+            {
+                Write-Output $_.Exception.Message
+                $writeTo = "Enable-Mailbox: identity $upn Archive"
+                $logCode = "Error"
+                Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
+            }
+            try
+            {
+                Set-Mailbox -identity $upn -LitigationHoldEnabled $True -LitigationHoldDuration $LitigationHoldDuration -RoleAssignmentPolicy $RoleAssignmentPolicy
+                $writeTo = "Set-Mailbox: Successfully set mailbox $upn litigation hold and assignment policy"
+                $logCode = "Success"
+                Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
+            }
+            catch
+            {
+                Write-Output $_.Exception.Message
+                $writeTo = "Set-Mailbox: FAILED set mailbox $upn litigation hold and assignment policy"
+                $logCode = "Error"
+                Add-CoaWriteToLog -FileName $FileName -writeTo $writeTo -logCode $logCode
+            }
             try
             {
                 Set-CASMailbox -Identity $upn -OWAMailboxPolicy $ClientAccessPolicyName
