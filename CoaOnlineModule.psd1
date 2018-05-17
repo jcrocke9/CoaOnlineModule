@@ -13,8 +13,8 @@
     # Script module or binary module file associated with this manifest
     RootModule = '.\CoaOnlineModule.psm1'
 
-    # Version number of this module.
-    ModuleVersion        = '1.0'
+    # Version number of this module. Look below for another version number!
+    ModuleVersion        = '1.0.2'
 
     # ID used to uniquely identify this module
     GUID                 = '1889cf05-1f5c-40dc-83dd-1bfcd22d13f8'
