@@ -118,7 +118,6 @@ function Set-CoaMailboxConfiguration
     )
     $logCode = "Start"
     $writeTo = "Starting Mailbox Configuration Script"
-    $FileName = "MailboxConfiguration"
     Add-CoaWriteToLog -writeTo $writeTo -logCode $logCode -FileName $FileName
 
     $UserList = @()
