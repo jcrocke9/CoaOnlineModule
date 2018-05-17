@@ -880,7 +880,7 @@ function Remove-CoaUserActiveDirectory
     )
     try
     {
-        Set-ADUser $SamAccountName -Replace @{authOrig = $Script:authOrig} -ErrorAction Stop -ErrorVariable err1
+        Set-ADUser $SamAccountName -Replace @{authOrig = $Script:authOrig} -ErrorAction Stop
         $writeTo = "Set-ADUser`t$SamAccountName`tReplace authOrig"
         $logCode = "Success"
         $CurrentFileName = "RemoveUser"
@@ -889,14 +889,14 @@ function Remove-CoaUserActiveDirectory
     catch
     {
         Write-Output $_.Exception.Message
-        $writeTo = "Set-ADUser`t$SamAccountName`tCould not replace authOrig`t${$err1.Exception.Message}"
+        $writeTo = "Set-ADUser`t$SamAccountName`tCould not replace authOrig`t${$_.Exception.Message}"
         $logCode = "Error"
         $CurrentFileName = "RemoveUser"
         Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
     }
     try
     {
-        Set-ADUser $SamAccountName -Replace @{msExchHideFromAddressLists = "TRUE"} -ErrorAction Stop -ErrorVariable err2
+        Set-ADUser $SamAccountName -Replace @{msExchHideFromAddressLists = "TRUE"} -ErrorAction Stop
         $writeTo = "Set-ADUser`t$SamAccountName`tReplace msExchHideFromAddressLists"
         $logCode = "Success"
         $CurrentFileName = "RemoveUser"
@@ -905,7 +905,7 @@ function Remove-CoaUserActiveDirectory
     catch
     {
         Write-Output $_.Exception.Message
-        $writeTo = "Set-ADUser`t$SamAccountName`tCould not replace msExchHideFromAddressLists`t${$err2.Exception.Message}"
+        $writeTo = "Set-ADUser`t$SamAccountName`tCould not replace msExchHideFromAddressLists`t${$_.Exception.Message}"
         $logCode = "Error"
         $CurrentFileName = "RemoveUser"
         Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
@@ -938,7 +938,7 @@ function Remove-CoaUserActiveDirectory
     catch
     {
         Write-Output $_.Exception.Message
-        $writeTo = "Set-ADUser`t$SamAccountName`tCould not find for Group Membership`t${$err4.Exception.Message}"
+        $writeTo = "Set-ADUser`t$SamAccountName`tCould not find for Group Membership`t${$_.Exception.Message}"
         $logCode = "Error"
         $CurrentFileName = "RemoveUser"
         Add-CoaWriteToLog -FileName $CurrentFileName -writeTo $writeTo -logCode $logCode
@@ -1007,7 +1007,7 @@ function Set-CoaUserRetentionPolicy
     try
     {
         # Get Mailbox and turn the retention, type, ProhibitSendReceiveQuota, ProhibitSendQuota, IssueWarningQuota
-        Set-Mailbox -identity $SamAccountName -RetentionPolicy $Script:RetentionPolicyTermOfficial -ErrorAction Stop -ErrorVariable err3
+        Set-Mailbox -identity $SamAccountName -RetentionPolicy $Script:RetentionPolicyTermOfficial -ErrorAction Stop
         Add-CoaWriteToLog -writeTo "Set-Mailbox`t$SamAccountName`t$Script:RetentionPolicyTermOfficial" -logCode "Success" -FileName "RemoveUser"
     }
     catch
